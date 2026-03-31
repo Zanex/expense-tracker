@@ -15,6 +15,7 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
+import { ColorPicker } from "~/components/ui/color-picker";
 
 // ─── Schema ──────────────────────────────────────────────
 
@@ -119,51 +120,42 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
           )}
         />
 
-        {/* Icona + Colore affiancati */}
-        <div className="flex gap-4">
-          <FormField
-            control={form.control}
-            name="icon"
-            render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormLabel>Icona (emoji)</FormLabel>
-                <FormControl>
-                  <Input placeholder="🛒" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        {/* Icona */}
+        <FormField
+          control={form.control}
+          name="icon"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Icona (emoji)</FormLabel>
+              <FormControl>
+                <Input placeholder="🛒" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <FormField
-            control={form.control}
-            name="color"
-            render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormLabel>Colore</FormLabel>
-                <FormControl>
-                  <div className="flex gap-2">
-                    <Input
-                      type="color"
-                      className="h-10 w-12 cursor-pointer rounded-md border p-1"
-                      {...field}
-                    />
-                    <Input
-                      placeholder="#6366f1"
-                      {...field}
-                      onChange={(e) => field.onChange(e.target.value)}
-                    />
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        {/* Color Picker */}
+        <FormField
+          control={form.control}
+          name="color"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Colore</FormLabel>
+              <FormControl>
+                <ColorPicker
+                  value={field.value ?? "#6366f1"}
+                  onChange={field.onChange}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        {/* Preview */}
+        {/* Preview categoria */}
         {(form.watch("name") || form.watch("icon")) && (
-          <div className="flex items-center gap-2 rounded-lg border p-3">
+          <div className="flex items-center gap-2 rounded-lg border bg-muted/30 p-3">
             <span className="text-lg">{form.watch("icon") || "📁"}</span>
             <span
               className="rounded-full px-3 py-1 text-sm font-medium text-white"
