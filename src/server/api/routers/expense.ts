@@ -214,6 +214,57 @@ export const expenseRouter = createTRPCRouter({
       });
     }),
 
+  // Import batch di spese (usato dall'import CSV/XLSX)
+  importBatch: protectedProcedure
+    .input(
+      z.object({
+        expenses: z
+          .array(
+            z.object({
+              amount: z.number().positive(),
+              description: z.string().min(1).max(255),
+              date: z.date(),
+              categoryId: z.string().cuid(),
+            })
+          )
+          .min(1)
+          .max(500),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      // Verifica che tutte le categorie appartengano all'utente
+      const categoryIds = [
+        ...new Set(input.expenses.map((e) => e.categoryId)),
+      ];
+      const validCategories = await ctx.db.category.findMany({
+        where: { id: { in: categoryIds }, userId },
+        select: { id: true },
+      });
+
+      const validIds = new Set(validCategories.map((c) => c.id));
+      const invalidIds = categoryIds.filter((id) => !validIds.has(id));
+
+      if (invalidIds.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Categorie non valide: ${invalidIds.join(", ")}`,
+        });
+      }
+
+      // Inserimento in transazione — o tutte o nessuna
+      const result = await ctx.db.$transaction(
+        input.expenses.map((expense) =>
+          ctx.db.expense.create({
+            data: { ...expense, userId },
+          })
+        )
+      );
+
+      return { imported: result.length };
+    }),
+
   // Totale spese per il mese corrente (usato dalla dashboard nella Fase 2)
   getMonthlyTotal: protectedProcedure
     .input(

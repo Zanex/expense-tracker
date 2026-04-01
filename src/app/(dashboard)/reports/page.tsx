@@ -2,6 +2,7 @@
 
 import { MonthlyTrend } from "~/components/charts/monthly-trend";
 import { HistoricTable } from "~/components/reports/historic-table";
+import { ExportButton } from "~/components/reports/export-button";
 import { getCurrentMonth, getCurrentYear } from "~/lib/utils";
 
 export default function ReportsPage() {
@@ -11,11 +12,18 @@ export default function ReportsPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Report</h1>
-        <p className="text-sm text-muted-foreground">
-          Analisi storica delle tue spese.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Report</h1>
+          <p className="text-sm text-muted-foreground">
+            Analisi storica delle tue spese.
+          </p>
+        </div>
+        <ExportButton
+          month={currentMonth}
+          year={currentYear}
+          label="Esporta mese corrente"
+        />
       </div>
 
       {/* Grafico ultimi 12 mesi */}

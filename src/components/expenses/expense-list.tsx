@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import { toast } from "sonner";
-import { Plus, Receipt, Pencil, Trash2 } from "lucide-react";
+import { Plus, Receipt, Pencil, Trash2, Upload } from "lucide-react";
 import { formatCurrency, formatDate, getCurrentMonth, getCurrentYear } from "~/lib/utils";
 import { useDebounce } from "~/hooks/use-debounce";
+import { ImportDialog } from "./import-dialog";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -51,6 +52,7 @@ export function ExpenseList() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const debouncedSearch = useDebounce(filters.search, 300);
 
@@ -60,7 +62,7 @@ export function ExpenseList() {
     ...filters,
     search: debouncedSearch,
     page: currentPage,
-    limit: 20,
+    limit: 10,
   });
 
   const { data: editingExpense } = api.expense.getById.useQuery(
@@ -129,13 +131,22 @@ export function ExpenseList() {
   return (
     <>
       <div className="flex flex-col gap-4">
-        {/* Filtri + bottone aggiungi */}
+        {/* Filtri + bottone aggiungi + import */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <ExpenseFilters filters={filters} onChange={handleFiltersChange} />
-          <Button onClick={handleOpenCreate}>
-            <Plus className="mr-2 h-4 w-4" />
-            Aggiungi spesa
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setImportOpen(true)}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Importa
+            </Button>
+            <Button onClick={handleOpenCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              Aggiungi spesa
+            </Button>
+          </div>
         </div>
 
         {/* Tabella o empty state */}
@@ -156,26 +167,73 @@ export function ExpenseList() {
         ) : (
           <>
             <div className="rounded-lg border bg-white">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Descrizione</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead className="text-right">Importo</TableHead>
-                    <TableHead className="w-20" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {expenses.map((expense) => (
-                    <TableRow key={expense.id} className="group">
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatDate(expense.date)}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {expense.description}
-                      </TableCell>
-                      <TableCell>
+              {/* Vista tabella — desktop */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Descrizione</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead className="text-right">Importo</TableHead>
+                      <TableHead className="w-20" />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {expenses.map((expense) => (
+                      <TableRow key={expense.id} className="group">
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(expense.date)}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {expense.description}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="secondary"
+                            style={{
+                              backgroundColor: expense.category.color ?? "#6366f1",
+                              color: "#fff",
+                            }}
+                          >
+                            {expense.category.icon ?? "📁"} {expense.category.name}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums">
+                          {formatCurrency(Number(expense.amount))}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOpenEdit(expense.id)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setDeletingId(expense.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Vista card — mobile */}
+              <div className="flex flex-col divide-y md:hidden">
+                {expenses.map((expense) => (
+                  <div key={expense.id} className="flex items-start justify-between p-4">
+                    <div className="flex flex-col gap-1.5">
+                      <p className="font-medium">{expense.description}</p>
+                      <div className="flex items-center gap-2">
                         <Badge
                           variant="secondary"
                           style={{
@@ -185,33 +243,37 @@ export function ExpenseList() {
                         >
                           {expense.category.icon ?? "📁"} {expense.category.name}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-semibold tabular-nums">
+                        <span className="text-xs text-muted-foreground">
+                          {formatDate(expense.date)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold tabular-nums">
                         {formatCurrency(Number(expense.amount))}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenEdit(expense.id)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setDeletingId(expense.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      </span>
+                      <div className="flex gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleOpenEdit(expense.id)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => setDeletingId(expense.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Paginazione */}
@@ -274,6 +336,11 @@ export function ExpenseList() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Import dialog */}
+      <ImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+      />
     </>
   );
 }

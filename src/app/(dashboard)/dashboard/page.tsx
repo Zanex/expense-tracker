@@ -5,13 +5,14 @@ import { MonthFilterControl } from "~/components/dashboard/month-filter";
 import { KpiGrid } from "~/components/dashboard/kpi-grid";
 import { ExpensesByCategory } from "~/components/charts/expenses-by-category";
 import { MonthlyTrend } from "~/components/charts/monthly-trend";
+import { ExportButton } from "~/components/reports/export-button";
 
 export default function DashboardPage() {
   const filter = useMonthFilter();
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header con filtro mese */}
+      {/* Header con filtro mese + export */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
@@ -19,7 +20,14 @@ export default function DashboardPage() {
             Panoramica delle tue spese.
           </p>
         </div>
-        <MonthFilterControl filter={filter} />
+        <div className="flex items-center gap-2">
+          <MonthFilterControl filter={filter} />
+          <ExportButton
+            month={filter.month}
+            year={filter.year}
+            label="PDF"
+          />
+        </div>
       </div>
 
       {/* KPI cards */}
