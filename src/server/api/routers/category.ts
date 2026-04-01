@@ -11,6 +11,10 @@ const categoryCreateSchema = z.object({
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/, "Colore HEX non valido (es. #FF5733)")
     .optional(),
+  budget: z
+    .number()
+    .positive("Il budget deve essere maggiore di zero")
+    .optional(),
 });
 
 const categoryUpdateSchema = z.object({
@@ -25,6 +29,11 @@ const categoryUpdateSchema = z.object({
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/, "Colore HEX non valido (es. #FF5733)")
     .optional(),
+  budget: z
+    .number()
+    .positive("Il budget deve essere maggiore di zero")
+    .optional()
+    .nullable(), // nullable per poter rimuovere il budget
 });
 
 // ─── Router ──────────────────────────────────────────────
@@ -32,15 +41,35 @@ const categoryUpdateSchema = z.object({
 export const categoryRouter = createTRPCRouter({
   // Tutte le categorie dell'utente autenticato
   getAll: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.db.category.findMany({
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    const categories = await ctx.db.category.findMany({
       where: { userId: ctx.session.user.id },
       include: {
         _count: {
-          select: { expenses: true }, // quante spese ha ogni categoria
+          select: { expenses: true },
+        },
+        expenses: {
+          where: {
+            date: { gte: monthStart, lt: monthEnd },
+          },
+          select: { amount: true },
         },
       },
       orderBy: { createdAt: "asc" },
     });
+
+    // Calcola il totale speso nel mese corrente per ogni categoria
+    return categories.map((cat) => ({
+      ...cat,
+      spentThisMonth: cat.expenses.reduce(
+        (sum, e) => sum + e.amount.toNumber(),
+        0
+      ),
+      expenses: undefined, // non esporre le singole spese
+    }));
   }),
 
   // Singola categoria per id (usata nel form di edit)

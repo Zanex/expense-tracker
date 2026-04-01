@@ -66,6 +66,7 @@ model Category {
   icon      String?
   color     String?
   userId    String
+  budget    Decimal?  @db.Decimal(10, 2)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   expenses  Expense[]
   createdAt DateTime  @default(now())

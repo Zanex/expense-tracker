@@ -27,6 +27,13 @@ const formSchema = z.object({
     .regex(/^#[0-9A-Fa-f]{6}$/, "Colore HEX non valido (es. #FF5733)")
     .optional()
     .or(z.literal("")),
+  budget: z
+    .string()
+    .optional()
+    .refine(
+      (v) => !v || (!isNaN(parseFloat(v)) && parseFloat(v) > 0),
+      { message: "Il budget deve essere maggiore di zero" }
+    ),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -39,6 +46,7 @@ interface CategoryFormProps {
     name: string;
     icon: string | null;
     color: string | null;
+    budget?: number | { toNumber: () => number } | null;
   };
   onSuccess: () => void;
 }
@@ -49,12 +57,19 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
   const isEditing = !!category;
   const utils = api.useUtils();
 
+  const budgetValue = category?.budget
+    ? typeof category.budget === "object"
+      ? category.budget.toNumber().toFixed(2)
+      : String(category.budget)
+    : "";
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: category?.name ?? "",
       icon: category?.icon ?? "",
       color: category?.color ?? "#6366f1",
+      budget: budgetValue,
     },
   });
 
@@ -89,6 +104,7 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
       name: values.name,
       icon: values.icon || undefined,
       color: values.color || undefined,
+      budget: values.budget ? parseFloat(values.budget) : undefined,
     };
 
     if (isEditing) {
@@ -165,6 +181,38 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
             </span>
           </div>
         )}
+
+        {/* Budget mensile */}
+        <FormField
+          control={form.control}
+          name="budget"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Budget mensile{" "}
+                <span className="text-xs font-normal text-muted-foreground">
+                  (opzionale)
+                </span>
+              </FormLabel>
+              <FormControl>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                    €
+                  </span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="0.00"
+                    className="pl-7"
+                    {...field}
+                  />
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <Button type="submit" disabled={isPending} className="mt-2">
           {isPending
