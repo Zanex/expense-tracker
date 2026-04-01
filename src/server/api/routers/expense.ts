@@ -37,6 +37,9 @@ const expenseFiltersSchema = z.object({
   month: z.number().min(1).max(12).optional(),
   year: z.number().min(2000).max(2100).optional(),
   categoryId: z.string().cuid().optional(),
+  search: z.string().max(100).optional(),       // ricerca per descrizione
+  amountMin: z.number().positive().optional(),  // importo minimo
+  amountMax: z.number().positive().optional(),  // importo massimo
   page: z.number().min(1).default(1),
   limit: z.number().min(1).max(100).default(20),
 });
@@ -58,7 +61,7 @@ export const expenseRouter = createTRPCRouter({
   getAll: protectedProcedure
     .input(expenseFiltersSchema)
     .query(async ({ ctx, input }) => {
-      const { month, year, categoryId, page, limit } = input;
+      const { month, year, categoryId, search, amountMin, amountMax, page, limit } = input;
       const skip = (page - 1) * limit;
 
       const where = {
@@ -67,6 +70,20 @@ export const expenseRouter = createTRPCRouter({
           date: buildDateFilter(month, year),
         }),
         ...(categoryId && { categoryId }),
+        // Ricerca full-text sulla descrizione (case-insensitive)
+        ...(search && {
+          description: {
+            contains: search,
+            mode: "insensitive" as const,
+          },
+        }),
+        // Filtro importo minimo e massimo
+        ...((amountMin ?? amountMax) && {
+          amount: {
+            ...(amountMin && { gte: amountMin }),
+            ...(amountMax && { lte: amountMax }),
+          },
+        }),
       };
 
       // Query parallele per dati e conteggio totale
