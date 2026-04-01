@@ -3,8 +3,7 @@ import {
   Page,
   Text,
   View,
-  StyleSheet,
-  Font,
+  StyleSheet
 } from "@react-pdf/renderer";
 
 // ─── Types ────────────────────────────────────────────────

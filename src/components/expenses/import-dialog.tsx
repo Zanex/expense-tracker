@@ -301,7 +301,7 @@ export function ImportDialog({ open, onClose }: ImportDialogProps) {
               {/* Data */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium">Data</label>
-                <Select value={mapping.date} onValueChange={(v) => setMapping({ ...mapping, date: v })}>
+                <Select value={mapping.date} onValueChange={(v) => setMapping({ ...mapping, date: v ?? "" })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Scegli colonna..." />
                   </SelectTrigger>
@@ -316,7 +316,7 @@ export function ImportDialog({ open, onClose }: ImportDialogProps) {
               {/* Descrizione */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium">Descrizione</label>
-                <Select value={mapping.description} onValueChange={(v) => setMapping({ ...mapping, description: v })}>
+                <Select value={mapping.description} onValueChange={(v) => setMapping({ ...mapping, description: v ?? "" })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Scegli colonna..." />
                   </SelectTrigger>
@@ -331,7 +331,7 @@ export function ImportDialog({ open, onClose }: ImportDialogProps) {
               {/* Importo */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium">Importo</label>
-                <Select value={mapping.amount} onValueChange={(v) => setMapping({ ...mapping, amount: v })}>
+                <Select value={mapping.amount} onValueChange={(v) => setMapping({ ...mapping, amount: v ?? "" })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Scegli colonna..." />
                   </SelectTrigger>
@@ -346,7 +346,7 @@ export function ImportDialog({ open, onClose }: ImportDialogProps) {
               {/* Categoria */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium">Categoria</label>
-                <Select value={defaultCategoryId} onValueChange={setDefaultCategoryId}>
+                <Select value={defaultCategoryId} onValueChange={(v) => setDefaultCategoryId(v ?? "")}>
                   <SelectTrigger>
                     <SelectValue placeholder="Assegna categoria..." />
                   </SelectTrigger>
