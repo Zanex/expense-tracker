@@ -1,6 +1,6 @@
 import Google from "next-auth/providers/google";
+import type { NextAuthConfig } from "next-auth";
 
-/** @type {import('next-auth').NextAuthConfig} */
 export const authConfig = {
   providers: [
     Google({
@@ -13,11 +13,11 @@ export const authConfig = {
       ...session,
       user: {
         ...session.user,
-        id: user ? user.id : token?.sub,
+        id: user ? user.id : (token?.sub ?? ""),
       },
     }),
   },
   pages: {
     signIn: "/login",
   },
-};
+} satisfies NextAuthConfig;
