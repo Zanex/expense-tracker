@@ -2,7 +2,6 @@ import { createTRPCRouter, createCallerFactory } from "~/server/api/trpc";
 import { categoryRouter } from "~/server/api/routers/category";
 import { expenseRouter } from "~/server/api/routers/expense";
 import { reportRouter } from "~/server/api/routers/report";
-import { postRouter } from "~/server/api/routers/post";
 
 /**
  * Root router — aggiungere qui i nuovi sub-router man mano che vengono creati.
@@ -12,8 +11,7 @@ import { postRouter } from "~/server/api/routers/post";
 export const appRouter = createTRPCRouter({
   category: categoryRouter,
   expense: expenseRouter,
-  report: reportRouter,
-  post: postRouter,
+  report: reportRouter
 });
 
 export type AppRouter = typeof appRouter;
