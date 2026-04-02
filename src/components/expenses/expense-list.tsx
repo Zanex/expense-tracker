@@ -166,7 +166,7 @@ export function ExpenseList() {
           />
         ) : (
           <>
-            <div className="rounded-lg border bg-white">
+            <div className="rounded-lg border bg-card">
               {/* Vista tabella — desktop */}
               <div className="hidden md:block">
                 <Table>

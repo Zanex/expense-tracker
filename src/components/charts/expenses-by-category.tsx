@@ -42,8 +42,8 @@ function CustomTooltip({
   if (!item) return null;
 
   return (
-    <div className="rounded-lg border bg-white px-3 py-2 shadow-md">
-      <p className="text-sm font-medium">{item.name}</p>
+    <div className="rounded-lg border bg-popover px-3 py-2 shadow-md outline-hidden">
+      <p className="text-sm font-medium text-popover-foreground">{item.name}</p>
       <p className="text-sm text-muted-foreground">{formatCurrency(item.value)}</p>
     </div>
   );

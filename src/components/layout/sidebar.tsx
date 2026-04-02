@@ -61,7 +61,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   return (
     <>
       {/* Desktop sidebar — visibile da md in su */}
-      <aside className="hidden h-screen w-60 flex-col border-r bg-white px-3 py-4 md:flex">
+      <aside className="hidden h-screen w-60 flex-col border-r bg-background px-3 py-4 md:flex">
         <NavContent />
       </aside>
 
@@ -74,7 +74,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             onClick={onMobileClose}
           />
           {/* Pannello */}
-          <aside className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r bg-white px-3 py-4 shadow-xl md:hidden">
+          <aside className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r bg-background px-3 py-4 shadow-xl md:hidden">
             <button
               onClick={onMobileClose}
               className="absolute right-3 top-3 rounded-lg p-1.5 text-muted-foreground hover:bg-accent"

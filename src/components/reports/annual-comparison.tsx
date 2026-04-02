@@ -48,31 +48,31 @@ function CustomTooltip({
   const delta = valA === 0 ? null : Math.round(((valB - valA) / valA) * 100);
 
   return (
-    <div className="rounded-lg border bg-white px-3 py-2.5 shadow-md">
+    <div className="rounded-lg border bg-popover px-3 py-2.5 shadow-md outline-hidden">
       <p className="mb-2 text-xs font-medium text-muted-foreground">{label}</p>
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-4">
-          <span className="flex items-center gap-1.5 text-xs">
+          <span className="flex items-center gap-1.5 text-xs text-popover-foreground">
             <span className="h-2.5 w-2.5 rounded-sm bg-[#c7d2fe]" />
             {yearA}
           </span>
-          <span className="text-xs font-medium tabular-nums">
+          <span className="text-xs font-medium tabular-nums text-popover-foreground">
             {formatCurrency(valA)}
           </span>
         </div>
         <div className="flex items-center justify-between gap-4">
-          <span className="flex items-center gap-1.5 text-xs">
+          <span className="flex items-center gap-1.5 text-xs text-popover-foreground">
             <span className="h-2.5 w-2.5 rounded-sm bg-[#6366f1]" />
             {yearB}
           </span>
-          <span className="text-xs font-medium tabular-nums">
+          <span className="text-xs font-medium tabular-nums text-popover-foreground">
             {formatCurrency(valB)}
           </span>
         </div>
         {delta !== null && (
           <p
             className={cn(
-              "mt-1 border-t pt-1 text-xs font-medium",
+              "mt-1 border-t border-border/50 pt-1 text-xs font-medium",
               delta > 0 ? "text-red-500" : delta < 0 ? "text-green-500" : "text-muted-foreground"
             )}
           >
@@ -168,10 +168,10 @@ export function AnnualComparison() {
             {/* Grafico */}
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={data?.months} barSize={12} barGap={2}>
-                <CartesianGrid vertical={false} stroke="#f0f0f0" />
+                <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" opacity={0.5} />
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 11 }}
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -179,7 +179,7 @@ export function AnnualComparison() {
                   tickFormatter={(v: number) =>
                     v >= 1000 ? `€${(v / 1000).toFixed(1)}k` : `€${v}`
                   }
-                  tick={{ fontSize: 11 }}
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                   tickLine={false}
                   axisLine={false}
                   width={52}
@@ -188,7 +188,7 @@ export function AnnualComparison() {
                   content={
                     <CustomTooltip yearA={yearA} yearB={yearB} />
                   }
-                  cursor={{ fill: "#f4f4f5" }}
+                  cursor={{ fill: "var(--muted)", opacity: 0.15 }}
                 />
                 <Legend
                   formatter={(value) => (

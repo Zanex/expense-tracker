@@ -41,9 +41,11 @@ function CustomTooltip({
   if (value === undefined) return null;
 
   return (
-    <div className="rounded-lg border bg-white px-3 py-2 shadow-md">
+    <div className="rounded-lg border bg-popover px-3 py-2 shadow-md outline-hidden">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm font-medium">{formatCurrency(value)}</p>
+      <p className="text-sm font-medium text-popover-foreground">
+        {formatCurrency(value)}
+      </p>
     </div>
   );
 }
@@ -78,10 +80,10 @@ export function MonthlyTrend({ month, year, months = 6 }: MonthlyTrendProps) {
         ) : (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={data} barSize={32}>
-              <CartesianGrid vertical={false} stroke="#f0f0f0" />
+              <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" opacity={0.5} />
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
                 tickLine={false}
                 axisLine={false}
               />
@@ -89,12 +91,15 @@ export function MonthlyTrend({ month, year, months = 6 }: MonthlyTrendProps) {
                 tickFormatter={(v: number) =>
                   v >= 1000 ? `€${(v / 1000).toFixed(1)}k` : `€${v}`
                 }
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
                 tickLine={false}
                 axisLine={false}
                 width={56}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f4f4f5" }} />
+              <Tooltip 
+                content={<CustomTooltip />} 
+                cursor={{ fill: "var(--muted)", opacity: 0.15 }} 
+              />
               <Bar dataKey="total" radius={[4, 4, 0, 0]}>
                 {data.map((entry, i) => (
                   <Cell

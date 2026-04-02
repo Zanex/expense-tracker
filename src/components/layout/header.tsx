@@ -13,6 +13,7 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
+import { ThemeToggle } from "~/components/ui/theme-toggle";
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -33,7 +34,7 @@ export function Header({ user, onMenuClick }: HeaderProps) {
     : "U";
 
   return (
-    <header className="flex h-14 items-center justify-between border-b bg-white px-4 md:justify-end md:px-6">
+    <header className="flex h-14 items-center justify-between border-b bg-background px-4 md:justify-end md:px-6">
       {/* Hamburger — solo mobile */}
       <Button
         variant="ghost"
@@ -44,11 +45,14 @@ export function Header({ user, onMenuClick }: HeaderProps) {
         <Menu className="h-5 w-5" />
       </Button>
 
-      {/* Logo mobile — centro header su mobile */}
+      {/* Logo mobile */}
       <span className="text-sm font-bold md:hidden">💰 Expense Tracker</span>
 
-      {/* User menu */}
-      <DropdownMenu>
+      {/* Destra: toggle tema + user menu */}
+      <div className="flex items-center gap-1">
+        <ThemeToggle />
+
+        <DropdownMenu>
         <DropdownMenuTrigger
           render={
             <button className="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-accent">
@@ -60,21 +64,22 @@ export function Header({ user, onMenuClick }: HeaderProps) {
                 {user?.name}
               </span>
             </button>
-          }
+            }
         />
-        <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuLabel className="text-xs text-muted-foreground">
-            {user?.email}
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="cursor-pointer text-destructive focus:text-destructive"
-            onClick={() => signOut({ callbackUrl: "/login" })}
-          >
-            Esci
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              {user?.email}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="cursor-pointer text-destructive focus:text-destructive"
+              onClick={() => signOut({ callbackUrl: "/login" })}
+            >
+              Esci
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </header>
   );
 }

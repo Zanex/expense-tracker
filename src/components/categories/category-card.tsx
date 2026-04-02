@@ -55,7 +55,7 @@ export function CategoryCard({ category, onEdit }: CategoryCardProps) {
   });
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border bg-white p-4 shadow-sm">
+    <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-sm">
       {/* Riga principale: info + azioni */}
       <div className="flex items-center justify-between">
         {/* Info categoria */}

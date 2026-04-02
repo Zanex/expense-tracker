@@ -414,8 +414,8 @@ export function ImportDialog({ open, onClose }: ImportDialogProps) {
                   <div
                     key={i}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 text-sm",
-                      !row.valid && "opacity-50 bg-red-50"
+                       "flex items-center gap-3 px-3 py-2 text-sm",
+                      !row.valid && "opacity-50 bg-destructive/10"
                     )}
                   >
                     {row.valid ? (

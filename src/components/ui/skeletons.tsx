@@ -16,7 +16,7 @@ export function ExpenseListSkeleton() {
       </div>
 
       {/* Tabella skeleton */}
-      <div className="rounded-lg border bg-white">
+      <div className="rounded-lg border bg-card">
         <div className="border-b px-4 py-3">
           <div className="flex gap-4">
             <Skeleton className="h-4 w-16" />
@@ -46,7 +46,7 @@ export function CategoryListSkeleton() {
       {Array.from({ length: 5 }).map((_, i) => (
         <div
           key={i}
-          className="flex items-center justify-between rounded-lg border bg-white p-4"
+          className="flex items-center justify-between rounded-lg border bg-card p-4"
         >
           <div className="flex items-center gap-3">
             <Skeleton className="h-8 w-8 rounded-full" />
@@ -71,7 +71,7 @@ export function KpiGridSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="rounded-lg border bg-white p-6">
+        <div key={i} className="rounded-lg border bg-card p-6">
           <div className="flex flex-col gap-3">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-8 w-32" />
@@ -87,7 +87,7 @@ export function KpiGridSkeleton() {
 
 export function ChartSkeleton() {
   return (
-    <div className="rounded-lg border bg-white p-6">
+    <div className="rounded-lg border bg-card p-6">
       <Skeleton className="mb-4 h-5 w-32" />
       <Skeleton className="h-64 w-full rounded-md" />
     </div>
