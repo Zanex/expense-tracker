@@ -138,19 +138,19 @@ export const reportRouter = createTRPCRouter({
 
       const categoryMap = new Map(categories.map((c) => [c.id, c]));
 
-      return grouped.flatMap((g) => {
-        const category = categoryMap.get(g.categoryId);
-        if (!category) return [];
-        return [
-          {
+      return grouped
+        .map((g) => {
+          const category = categoryMap.get(g.categoryId);
+          if (!category) return null;
+          return {
             id: category.id,
             name: category.name,
             icon: category.icon,
             color: category.color ?? "#6366f1",
             total: g._sum.amount?.toNumber() ?? 0,
-          },
-        ];
-      });
+          };
+        })
+        .filter(Boolean);
     }),
 
   /**
@@ -291,5 +291,73 @@ export const reportRouter = createTRPCRouter({
       );
 
       return rows;
+    }),
+
+  /**
+   * getAnnualComparison
+   * Confronta due anni mese per mese.
+   * Usato dal grouped bar chart nella pagina /reports.
+   */
+  getAnnualComparison: protectedProcedure
+    .input(
+      z.object({
+        yearA: z.number().min(2000).max(2100),
+        yearB: z.number().min(2000).max(2100),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { yearA, yearB } = input;
+      const userId = ctx.session.user.id;
+
+      const MONTHS_IT = [
+        "Gen", "Feb", "Mar", "Apr", "Mag", "Giu",
+        "Lug", "Ago", "Set", "Ott", "Nov", "Dic",
+      ];
+
+      // Query parallele per tutti i 12 mesi di entrambi gli anni
+      const [totalsA, totalsB] = await Promise.all([
+        Promise.all(
+          Array.from({ length: 12 }, (_, i) =>
+            ctx.db.expense.aggregate({
+              where: { userId, date: buildDateRange(i + 1, yearA) },
+              _sum: { amount: true },
+            })
+          )
+        ),
+        Promise.all(
+          Array.from({ length: 12 }, (_, i) =>
+            ctx.db.expense.aggregate({
+              where: { userId, date: buildDateRange(i + 1, yearB) },
+              _sum: { amount: true },
+            })
+          )
+        ),
+      ]);
+
+      const months = MONTHS_IT.map((label, i) => {
+        const a = totalsA[i]?._sum.amount?.toNumber() ?? 0;
+        const b = totalsB[i]?._sum.amount?.toNumber() ?? 0;
+        const delta =
+          a === 0 ? null : Math.round(((b - a) / a) * 100);
+
+        return { month: i + 1, label, [yearA]: a, [yearB]: b, delta };
+      });
+
+      const totalA = totalsA.reduce(
+        (sum, t) => sum + (t._sum.amount?.toNumber() ?? 0),
+        0
+      );
+      const totalB = totalsB.reduce(
+        (sum, t) => sum + (t._sum.amount?.toNumber() ?? 0),
+        0
+      );
+
+      const annualDelta =
+        totalA === 0 ? null : Math.round(((totalB - totalA) / totalA) * 100);
+
+      return {
+        months,
+        summary: { totalA, totalB, annualDelta },
+      };
     }),
 });

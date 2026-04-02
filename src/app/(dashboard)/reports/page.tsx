@@ -3,6 +3,7 @@
 import { MonthlyTrend } from "~/components/charts/monthly-trend";
 import { HistoricTable } from "~/components/reports/historic-table";
 import { ExportButton } from "~/components/reports/export-button";
+import { AnnualComparison } from "~/components/reports/annual-comparison";
 import { getCurrentMonth, getCurrentYear } from "~/lib/utils";
 
 export default function ReportsPage() {
@@ -26,12 +27,15 @@ export default function ReportsPage() {
         />
       </div>
 
-      {/* Grafico ultimi 12 mesi */}
+      {/* Grafico andamento 12 mesi */}
       <MonthlyTrend
         month={currentMonth}
         year={currentYear}
         months={12}
       />
+
+      {/* Confronto annuale YoY */}
+      <AnnualComparison />
 
       {/* Tabella storica */}
       <HistoricTable months={12} />
