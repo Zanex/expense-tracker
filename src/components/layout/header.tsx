@@ -49,17 +49,19 @@ export function Header({ user, onMenuClick }: HeaderProps) {
 
       {/* User menu */}
       <DropdownMenu>
-        <DropdownMenuTrigger>
-          <button className="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-accent">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={user?.image ?? ""} alt={user?.name ?? ""} />
-              <AvatarFallback>{initials}</AvatarFallback>
-            </Avatar>
-            <span className="hidden text-sm font-medium md:inline">
-              {user?.name}
-            </span>
-          </button>
-        </DropdownMenuTrigger>
+        <DropdownMenuTrigger
+          render={
+            <button className="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-accent">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={user?.image ?? ""} alt={user?.name ?? ""} />
+                <AvatarFallback>{initials}</AvatarFallback>
+              </Avatar>
+              <span className="hidden text-sm font-medium md:inline">
+                {user?.name}
+              </span>
+            </button>
+          }
+        />
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuLabel className="text-xs text-muted-foreground">
             {user?.email}

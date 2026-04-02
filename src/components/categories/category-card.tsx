@@ -89,16 +89,18 @@ export function CategoryCard({ category, onEdit }: CategoryCardProps) {
           </Button>
 
           <AlertDialog>
-            <AlertDialogTrigger>
-              <Button
-                variant="ghost"
-                size="icon"
-                disabled={deleteMutation.isPending}
-                className="text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </AlertDialogTrigger>
+            <AlertDialogTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={deleteMutation.isPending}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              }
+            />
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Eliminare la categoria?</AlertDialogTitle>
