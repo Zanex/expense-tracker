@@ -78,7 +78,12 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
 
   const createMutation = api.expense.create.useMutation({
     onSuccess: async () => {
-      await utils.expense.getAll.invalidate();
+      await Promise.all([
+        utils.expense.getAll.invalidate(),
+        utils.report.getSummary.invalidate(),
+        utils.report.getByCategory.invalidate(),
+        utils.report.getMonthlyTrend.invalidate(),
+      ]);
       toast.success("Spesa aggiunta");
       onSuccess();
     },
@@ -87,7 +92,12 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
 
   const updateMutation = api.expense.update.useMutation({
     onSuccess: async () => {
-      await utils.expense.getAll.invalidate();
+      await Promise.all([
+        utils.expense.getAll.invalidate(),
+        utils.report.getSummary.invalidate(),
+        utils.report.getByCategory.invalidate(),
+        utils.report.getMonthlyTrend.invalidate(),
+      ]);
       toast.success("Spesa aggiornata");
       onSuccess();
     },

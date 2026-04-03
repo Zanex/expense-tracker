@@ -76,7 +76,12 @@ export function ExpenseList() {
 
   const deleteMutation = api.expense.delete.useMutation({
     onSuccess: async () => {
-      await utils.expense.getAll.invalidate();
+      await Promise.all([
+        utils.expense.getAll.invalidate(),
+        utils.report.getSummary.invalidate(),
+        utils.report.getByCategory.invalidate(),
+        utils.report.getMonthlyTrend.invalidate(),
+      ]);
       toast.success("Spesa eliminata");
       setDeletingId(null);
     },

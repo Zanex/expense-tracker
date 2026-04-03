@@ -109,7 +109,12 @@ export function ImportDialog({ open, onClose }: ImportDialogProps) {
 
   const importMutation = api.expense.importBatch.useMutation({
     onSuccess: async (result) => {
-      await utils.expense.getAll.invalidate();
+      await Promise.all([
+        utils.expense.getAll.invalidate(),
+        utils.report.getSummary.invalidate(),
+        utils.report.getByCategory.invalidate(),
+        utils.report.getMonthlyTrend.invalidate(),
+      ]);
       toast.success(`${result.imported} spese importate con successo`);
       handleClose();
     },
