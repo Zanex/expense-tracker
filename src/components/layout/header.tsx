@@ -6,6 +6,7 @@ import { Menu } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -67,16 +68,18 @@ export function Header({ user, onMenuClick }: HeaderProps) {
             }
         />
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              {user?.email}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="cursor-pointer text-destructive focus:text-destructive"
-              onClick={() => signOut({ callbackUrl: "/login" })}
-            >
-              Esci
-            </DropdownMenuItem>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                {user?.email}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="cursor-pointer text-destructive focus:text-destructive"
+                onClick={() => signOut({ callbackUrl: "/login" })}
+              >
+                Esci
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
