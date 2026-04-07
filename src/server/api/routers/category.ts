@@ -188,4 +188,43 @@ export const categoryRouter = createTRPCRouter({
         where: { id: input.id, userId: ctx.session.user.id },
       });
     }),
+
+  // Crea più categorie in una volta — usato dall'onboarding
+  createBatch: protectedProcedure
+    .input(
+      z.array(
+        z.object({
+          name: z.string().min(1).max(50),
+          icon: z.string().emoji().optional(),
+          color: z
+            .string()
+            .regex(/^#[0-9A-Fa-f]{6}$/)
+            .optional(),
+        })
+      ).min(1).max(10)
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      // Filtra nomi già esistenti per non bloccare su CONFLICT
+      const existing = await ctx.db.category.findMany({
+        where: { userId },
+        select: { name: true },
+      });
+      const existingNames = new Set(
+        existing.map((c) => c.name.toLowerCase())
+      );
+
+      const toCreate = input.filter(
+        (c) => !existingNames.has(c.name.toLowerCase())
+      );
+
+      if (toCreate.length === 0) return { created: 0 };
+
+      await ctx.db.category.createMany({
+        data: toCreate.map((c) => ({ ...c, userId })),
+      });
+
+      return { created: toCreate.length };
+    }),
 });

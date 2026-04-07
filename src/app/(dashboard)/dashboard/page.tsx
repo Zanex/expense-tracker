@@ -1,14 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import { useMonthFilter } from "~/hooks/use-month-filter";
+import { useOnboarding } from "~/hooks/use-onboarding";
 import { MonthFilterControl } from "~/components/dashboard/month-filter";
 import { KpiGrid } from "~/components/dashboard/kpi-grid";
 import { ExpensesByCategory } from "~/components/charts/expenses-by-category";
 import { MonthlyTrend } from "~/components/charts/monthly-trend";
 import { ExportButton } from "~/components/reports/export-button";
+import { OnboardingWizard } from "~/components/onboarding/onboarding-wizard";
 
 export default function DashboardPage() {
   const filter = useMonthFilter();
+  const { shouldShow } = useOnboarding();
+  const [wizardVisible, setWizardVisible] = useState(true);
+
+  const showWizard = shouldShow && wizardVisible;
 
   return (
     <div className="flex flex-col gap-6">
@@ -29,6 +36,11 @@ export default function DashboardPage() {
           />
         </div>
       </div>
+
+      {/* Onboarding wizard — visibile solo al primo accesso */}
+      {showWizard && (
+        <OnboardingWizard onComplete={() => setWizardVisible(false)} />
+      )}
 
       {/* KPI cards */}
       <KpiGrid month={filter.month} year={filter.year} />
