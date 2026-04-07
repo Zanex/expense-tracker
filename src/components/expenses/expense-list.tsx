@@ -113,6 +113,11 @@ export function ExpenseList() {
     setEditingId(null);
   }
 
+  function handleConfirmDelete() {
+    if (!deletingId || deleteMutation.isPending) return;
+    deleteMutation.mutate({ id: deletingId });
+  }
+
   // ─── Loading ─────────────────────────────────────────
 
   if (isLoading) {
@@ -334,9 +339,10 @@ export function ExpenseList() {
             <AlertDialogCancel>Annulla</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deletingId && deleteMutation.mutate({ id: deletingId })}
+              onClick={handleConfirmDelete}
+              disabled={deleteMutation.isPending}
             >
-              Elimina
+              {deleteMutation.isPending ? "Eliminazione..." : "Elimina"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
