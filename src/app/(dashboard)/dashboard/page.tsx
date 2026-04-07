@@ -9,6 +9,8 @@ import { ExpensesByCategory } from "~/components/charts/expenses-by-category";
 import { MonthlyTrend } from "~/components/charts/monthly-trend";
 import { ExportButton } from "~/components/reports/export-button";
 import { OnboardingWizard } from "~/components/onboarding/onboarding-wizard";
+import { ChartErrorBoundary } from "~/components/ui/chart-error-boundary";
+import { ErrorBoundary } from "~/components/ui/error-boundary";
 
 export default function DashboardPage() {
   const filter = useMonthFilter();
@@ -42,13 +44,20 @@ export default function DashboardPage() {
         <OnboardingWizard onComplete={() => setWizardVisible(false)} />
       )}
 
-      {/* KPI cards */}
-      <KpiGrid month={filter.month} year={filter.year} />
+      {/* KPI cards — fallback inline se crashano */}
+      <ErrorBoundary className="h-32">
+        <KpiGrid month={filter.month} year={filter.year} />
+      </ErrorBoundary>
 
-      {/* Grafici */}
+      {/* Grafici — ogni chart isolato */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <ExpensesByCategory month={filter.month} year={filter.year} />
-        <MonthlyTrend month={filter.month} year={filter.year} months={6} />
+        <ChartErrorBoundary title="Spese per categoria">
+          <ExpensesByCategory month={filter.month} year={filter.year} />
+        </ChartErrorBoundary>
+
+        <ChartErrorBoundary title="Andamento mensile">
+          <MonthlyTrend month={filter.month} year={filter.year} months={6} />
+        </ChartErrorBoundary>
       </div>
     </div>
   );
