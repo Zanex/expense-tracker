@@ -11,7 +11,6 @@ import {
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Search, SlidersHorizontal, X } from "lucide-react";
-import { MONTHS, getYearRange } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
 // ─── Types ────────────────────────────────────────────────
@@ -35,7 +34,6 @@ interface ExpenseFiltersProps {
 export function ExpenseFilters({ filters, onChange }: ExpenseFiltersProps) {
   const { data: categories } = api.category.getAll.useQuery();
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const years = getYearRange();
 
   const hasActiveFilters =
     filters.categoryId ??

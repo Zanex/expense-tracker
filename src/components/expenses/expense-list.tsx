@@ -4,7 +4,6 @@ import { useState } from "react";
 import { api } from "~/trpc/react";
 import { toast } from "sonner";
 import { Plus, Receipt, Pencil, Trash2, Upload } from "lucide-react";
-import { useMonthFilter } from "~/hooks/use-month-filter";
 import { formatCurrency, formatDate, toNumber } from "~/lib/utils";
 import { useDebounce } from "~/hooks/use-debounce";
 import { ImportDialog } from "./import-dialog";
