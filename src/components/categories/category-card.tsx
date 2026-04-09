@@ -16,6 +16,7 @@ import {
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
 import { BudgetProgress } from "./budget-progress";
+import { toNumber } from "~/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -37,12 +38,7 @@ interface CategoryCardProps {
 export function CategoryCard({ category, onEdit }: CategoryCardProps) {
   const utils = api.useUtils();
 
-  const budget =
-    category.budget == null
-      ? null
-      : typeof category.budget === "object"
-        ? category.budget.toNumber()
-        : category.budget;
+  const budget = category.budget == null ? null : toNumber(category.budget);
 
   const deleteMutation = api.category.delete.useMutation({
     onSuccess: async () => {

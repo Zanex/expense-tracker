@@ -16,6 +16,7 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { ColorPicker } from "~/components/ui/color-picker";
+import { toNumber } from "~/lib/utils";
 
 // ─── Schema ──────────────────────────────────────────────
 
@@ -58,9 +59,7 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
   const utils = api.useUtils();
 
   const budgetValue = category?.budget
-    ? typeof category.budget === "object"
-      ? category.budget.toNumber().toFixed(2)
-      : String(category.budget)
+    ? toNumber(category.budget).toFixed(2)
     : "";
 
   const form = useForm<FormValues>({

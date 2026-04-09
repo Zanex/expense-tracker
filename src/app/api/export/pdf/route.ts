@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { auth } from "~/lib/auth";
 import { db } from "~/server/db";
 import { ExpenseReport } from "~/components/reports/expense-report-pdf";
+import { toNumber } from "~/lib/utils";
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -67,7 +68,7 @@ export async function GET(req: NextRequest) {
 
   // Aggregazioni
   const totalAmount = expenses.reduce(
-    (sum, e) => sum + e.amount.toNumber(),
+    (sum, e) => sum + toNumber(e.amount),
     0
   );
 

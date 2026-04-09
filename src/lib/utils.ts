@@ -65,3 +65,27 @@ export function getYearRange(from = 2020): number[] {
   const current = getCurrentYear();
   return Array.from({ length: current - from + 1 }, (_, i) => current - i);
 }
+
+// ─── Conversione monetaria sicura ─────────────────────────
+
+/**
+ * Converte in modo sicuro qualsiasi tipo restituito da Prisma/tRPC
+ * per i campi Decimal in un number JavaScript.
+ *
+ * Prisma Decimal → .toNumber()
+ * number         → passthrough
+ * string         → normalizza separatore decimale e parsa
+ */
+export function toNumber(
+  value: { toNumber: () => number } | number | string | null | undefined
+): number {
+  if (value === null || value === undefined) return 0;
+  if (typeof value === "number") return value;
+  if (typeof value === "object" && "toNumber" in value) {
+    return value.toNumber();
+  }
+  // Normalizza la virgola come separatore decimale (es. import CSV italiani)
+  const normalized = String(value).replace(",", ".");
+  const parsed = parseFloat(normalized);
+  return isNaN(parsed) ? 0 : parsed;
+}

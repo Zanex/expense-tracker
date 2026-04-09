@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { api } from "~/trpc/react";
 import { toast } from "sonner";
-import { formatDateInput } from "~/lib/utils";
+import { formatDateInput, toNumber } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 import {
   Form,
@@ -67,7 +67,7 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      amount: expense ? Number(expense.amount).toFixed(2) : "",
+      amount: expense ? toNumber(expense.amount).toFixed(2) : "",
       description: expense?.description ?? "",
       date: expense ? formatDateInput(expense.date) : formatDateInput(new Date()),
       categoryId: expense?.categoryId ?? "",

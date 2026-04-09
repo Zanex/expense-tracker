@@ -4,7 +4,7 @@ import { useState } from "react";
 import { api } from "~/trpc/react";
 import { toast } from "sonner";
 import { Plus, Receipt, Pencil, Trash2, Upload } from "lucide-react";
-import { formatCurrency, formatDate, getCurrentMonth, getCurrentYear } from "~/lib/utils";
+import { formatCurrency, formatDate, getCurrentMonth, getCurrentYear, toNumber } from "~/lib/utils";
 import { useDebounce } from "~/hooks/use-debounce";
 import { ImportDialog } from "./import-dialog";
 import { Button } from "~/components/ui/button";
@@ -210,7 +210,7 @@ export function ExpenseList() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right font-semibold tabular-nums">
-                          {formatCurrency(Number(expense.amount))}
+                          {formatCurrency(toNumber(expense.amount))}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
@@ -260,7 +260,7 @@ export function ExpenseList() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-semibold tabular-nums">
-                        {formatCurrency(Number(expense.amount))}
+                        {formatCurrency(toNumber(expense.amount))}
                       </span>
                       <div className="flex gap-0.5">
                         <Button
