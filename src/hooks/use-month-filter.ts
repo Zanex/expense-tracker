@@ -1,5 +1,8 @@
-import { useState, useCallback } from "react";
-import { getCurrentMonth, getCurrentYear, MONTHS } from "~/lib/utils";
+"use client";
+
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useCallback } from "react";
+import { MONTHS, getCurrentMonth, getCurrentYear } from "~/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -14,39 +17,61 @@ export interface MonthFilter {
   isCurrentMonth: boolean;
 }
 
-// ─── Hook ────────────────────────────────────────────────
+// ─── Hook ─────────────────────────────────────────────────
 
 export function useMonthFilter(): MonthFilter {
-  const [month, setMonthState] = useState(getCurrentMonth);
-  const [year, setYearState] = useState(getCurrentYear);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Legge dall'URL, fallback al mese corrente
+  const rawMonth = searchParams.get("month");
+  const rawYear = searchParams.get("year");
+
+  const month = rawMonth
+    ? Math.min(Math.max(parseInt(rawMonth, 10), 1), 12)
+    : getCurrentMonth();
+
+  const year = rawYear
+    ? parseInt(rawYear, 10)
+    : getCurrentYear();
+
+  // Scrive nell'URL senza aggiungere voce nella history
+  const push = useCallback(
+    (newMonth: number, newYear: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("month", String(newMonth));
+      params.set("year", String(newYear));
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [router, pathname, searchParams]
+  );
 
   const goToPrev = useCallback(() => {
-    setMonthState((m) => {
-      if (m === 1) {
-        setYearState((y) => y - 1);
-        return 12;
-      }
-      return m - 1;
-    });
-  }, []);
+    if (month === 1) {
+      push(12, year - 1);
+    } else {
+      push(month - 1, year);
+    }
+  }, [month, year, push]);
 
   const goToNext = useCallback(() => {
-    setMonthState((m) => {
-      if (m === 12) {
-        setYearState((y) => y + 1);
-        return 1;
-      }
-      return m + 1;
-    });
-  }, []);
+    if (month === 12) {
+      push(1, year + 1);
+    } else {
+      push(month + 1, year);
+    }
+  }, [month, year, push]);
 
-  const setMonth = useCallback((m: number) => {
-    setMonthState(m);
-  }, []);
+  const setMonth = useCallback(
+    (m: number) => push(m, year),
+    [push, year]
+  );
 
-  const setYear = useCallback((y: number) => {
-    setYearState(y);
-  }, []);
+  const setYear = useCallback(
+    (y: number) => push(month, y),
+    [push, month]
+  );
 
   const monthLabel = MONTHS.find((m) => m.value === month)?.label ?? "";
   const label = `${monthLabel} ${year}`;

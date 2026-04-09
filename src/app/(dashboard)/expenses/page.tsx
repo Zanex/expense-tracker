@@ -1,20 +1,24 @@
-import { type Metadata } from "next";
+"use client";
+
+import { useMonthFilter } from "~/hooks/use-month-filter";
+import { MonthFilterControl } from "~/components/dashboard/month-filter";
 import { ExpenseList } from "~/components/expenses/expense-list";
 
-export const metadata: Metadata = {
-  title: "Spese — Expense Tracker",
-};
-
 export default function ExpensesPage() {
+  const filter = useMonthFilter();
+
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold">Spese</h1>
-        <p className="text-sm text-muted-foreground">
-          Tieni traccia di tutte le tue uscite.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Spese</h1>
+          <p className="text-sm text-muted-foreground">
+            Tieni traccia di tutte le tue uscite.
+          </p>
+        </div>
+        <MonthFilterControl filter={filter} />
       </div>
-      <ExpenseList />
+      <ExpenseList month={filter.month} year={filter.year} />
     </div>
   );
 }

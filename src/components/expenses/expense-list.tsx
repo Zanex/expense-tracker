@@ -4,7 +4,8 @@ import { useState } from "react";
 import { api } from "~/trpc/react";
 import { toast } from "sonner";
 import { Plus, Receipt, Pencil, Trash2, Upload } from "lucide-react";
-import { formatCurrency, formatDate, getCurrentMonth, getCurrentYear, toNumber } from "~/lib/utils";
+import { useMonthFilter } from "~/hooks/use-month-filter";
+import { formatCurrency, formatDate, toNumber } from "~/lib/utils";
 import { useDebounce } from "~/hooks/use-debounce";
 import { ImportDialog } from "./import-dialog";
 import { Button } from "~/components/ui/button";
@@ -41,13 +42,15 @@ import { Pagination } from "./pagination";
 
 // ─── Component ───────────────────────────────────────────
 
-export function ExpenseList() {
+interface ExpenseListProps {
+  month: number;
+  year: number;
+}
+
+export function ExpenseList({ month, year }: ExpenseListProps) {
   // ─── State ───────────────────────────────────────────
 
-  const [filters, setFilters] = useState<Filters>({
-    month: getCurrentMonth(),
-    year: getCurrentYear(),
-  });
+  const [filters, setFilters] = useState<Filters>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -60,6 +63,8 @@ export function ExpenseList() {
 
   const { data, isLoading } = api.expense.getAll.useQuery({
     ...filters,
+    month,
+    year,
     search: debouncedSearch,
     page: currentPage,
     limit: 10,
@@ -165,7 +170,7 @@ export function ExpenseList() {
             icon={Receipt}
             title="Nessuna spesa"
             description={
-              filters.month ?? filters.year ?? filters.categoryId ?? filters.search ?? filters.amountMin ?? filters.amountMax
+              month ?? year ?? filters.categoryId ?? filters.search ?? filters.amountMin ?? filters.amountMax
                 ? "Nessuna spesa trovata con i filtri selezionati."
                 : "Aggiungi la tua prima spesa per iniziare."
             }

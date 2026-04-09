@@ -38,8 +38,6 @@ export function ExpenseFilters({ filters, onChange }: ExpenseFiltersProps) {
   const years = getYearRange();
 
   const hasActiveFilters =
-    filters.month ??
-    filters.year ??
     filters.categoryId ??
     filters.search ??
     filters.amountMin ??
@@ -47,8 +45,6 @@ export function ExpenseFilters({ filters, onChange }: ExpenseFiltersProps) {
 
   function handleReset() {
     onChange({
-      month: undefined,
-      year: undefined,
       categoryId: undefined,
       search: undefined,
       amountMin: undefined,
@@ -81,46 +77,6 @@ export function ExpenseFilters({ filters, onChange }: ExpenseFiltersProps) {
             </button>
           )}
         </div>
-
-        {/* Mese */}
-        <Select
-          value={filters.month?.toString() ?? "all"}
-          onValueChange={(v) =>
-            onChange({ ...filters, month: !v || v === "all" ? undefined : parseInt(v) })
-          }
-        >
-          <SelectTrigger className="w-36">
-            <SelectValue placeholder="Mese" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tutti i mesi</SelectItem>
-            {MONTHS.map((m) => (
-              <SelectItem key={m.value} value={m.value.toString()}>
-                {m.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Anno */}
-        <Select
-          value={filters.year?.toString() ?? "all"}
-          onValueChange={(v) =>
-            onChange({ ...filters, year: !v || v === "all" ? undefined : parseInt(v) })
-          }
-        >
-          <SelectTrigger className="w-28">
-            <SelectValue placeholder="Anno" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tutti</SelectItem>
-            {years.map((y) => (
-              <SelectItem key={y} value={y.toString()}>
-                {y}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
 
         {/* Categoria */}
         <Select
