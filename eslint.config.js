@@ -15,7 +15,7 @@ const compat = new FlatCompat({
 });
 
 /** @type {import('eslint').Linter.Config[]} */
-export default [
+const config = [
   {
     ignores: [".next/", "dist/", "build/", "generated/", "next-env.d.ts"],
   },
@@ -46,3 +46,5 @@ export default [
   // Next.js configuration (using compat)
   ...compat.extends("next/core-web-vitals"),
 ];
+
+export default config;
