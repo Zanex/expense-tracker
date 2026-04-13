@@ -26,11 +26,6 @@ const monthYearInput = z.object({
 // ─── Router ──────────────────────────────────────────────
 
 export const reportRouter = createTRPCRouter({
-  /**
-   * getSummary
-   * KPI cards della dashboard: totale mese, numero spese,
-   * media per spesa, categoria top — tutti con delta vs mese precedente.
-   */
   getSummary: protectedProcedure
     .input(monthYearInput)
     .query(async ({ ctx, input }) => {
@@ -38,23 +33,17 @@ export const reportRouter = createTRPCRouter({
       const userId = ctx.session.user.id;
       const prev = getPrevMonth(month, year);
 
-      // Query parallele: mese corrente + mese precedente
       const [current, previous, categoryTotals] = await Promise.all([
-        // Aggregazione mese corrente
         ctx.db.expense.aggregate({
           where: { userId, date: buildDateRange(month, year) },
           _sum: { amount: true },
           _count: true,
         }),
-
-        // Aggregazione mese precedente (per delta)
         ctx.db.expense.aggregate({
           where: { userId, date: buildDateRange(prev.month, prev.year) },
           _sum: { amount: true },
           _count: true,
         }),
-
-        // Totale per categoria (per trovare la categoria top)
         ctx.db.expense.groupBy({
           by: ["categoryId"],
           where: { userId, date: buildDateRange(month, year) },
@@ -64,7 +53,6 @@ export const reportRouter = createTRPCRouter({
         }),
       ]);
 
-      // Recupera i dettagli della categoria top se esiste
       const topCategory =
         categoryTotals[0] && categoryTotals[0]._sum.amount
           ? await ctx.db.category.findUnique({
@@ -78,42 +66,27 @@ export const reportRouter = createTRPCRouter({
       const currentCount = current._count;
       const previousCount = previous._count;
 
-      // Calcolo delta percentuale
       function calcDelta(curr: number, prev: number): number | null {
         if (prev === 0) return null;
         return Math.round(((curr - prev) / prev) * 100);
       }
 
       return {
-        // Totale mese
         totalAmount: currentTotal,
         totalAmountDelta: calcDelta(currentTotal, previousTotal),
-
-        // Numero spese
         expenseCount: currentCount,
         expenseCountDelta: calcDelta(currentCount, previousCount),
-
-        // Media per spesa
         averageAmount: currentCount > 0 ? currentTotal / currentCount : 0,
-
-        // Categoria top
         topCategory: topCategory
           ? {
               ...topCategory,
               total: categoryTotals[0]?._sum.amount?.toNumber() ?? 0,
             }
           : null,
-
-        // Riferimento mese precedente (per etichette UI)
         previousMonth: prev,
       };
     }),
 
-  /**
-   * getByCategory
-   * Totale spese per categoria nel mese selezionato.
-   * Usato dal Pie chart della dashboard.
-   */
   getByCategory: protectedProcedure
     .input(monthYearInput)
     .query(async ({ ctx, input }) => {
@@ -129,7 +102,6 @@ export const reportRouter = createTRPCRouter({
 
       if (grouped.length === 0) return [];
 
-      // Recupera i dettagli di tutte le categorie coinvolte
       const categoryIds = grouped.map((g) => g.categoryId);
       const categories = await ctx.db.category.findMany({
         where: { id: { in: categoryIds } },
@@ -153,44 +125,29 @@ export const reportRouter = createTRPCRouter({
         .filter(Boolean);
     }),
 
-  /**
-   * getMonthlyTrend
-   * Totale spese per ciascuno degli ultimi N mesi.
-   * Usato dal Bar chart della dashboard e dal grafico annuale in /reports.
-   */
   getMonthlyTrend: protectedProcedure
     .input(
       z.object({
         month: z.number().min(1).max(12),
         year: z.number().min(2000).max(2100),
-        months: z.number().min(1).max(24).default(6), // quanti mesi a ritroso
+        months: z.number().min(1).max(24).default(6),
       })
     )
     .query(async ({ ctx, input }) => {
       const { month, year, months } = input;
       const userId = ctx.session.user.id;
 
-      // Genera la lista dei mesi da coprire (dal più vecchio al più recente)
       const periods: { month: number; year: number; label: string }[] = [];
-
       for (let i = months - 1; i >= 0; i--) {
         let m = month - i;
         let y = year;
-
-        while (m <= 0) {
-          m += 12;
-          y -= 1;
-        }
-
+        while (m <= 0) { m += 12; y -= 1; }
         const label = new Date(y, m - 1, 1).toLocaleDateString("it-IT", {
-          month: "short",
-          year: "2-digit",
+          month: "short", year: "2-digit",
         });
-
         periods.push({ month: m, year: y, label });
       }
 
-      // Query parallele per tutti i periodi
       const totals = await Promise.all(
         periods.map((p) =>
           ctx.db.expense.aggregate({
@@ -210,16 +167,10 @@ export const reportRouter = createTRPCRouter({
       }));
     }),
 
-  /**
-   * getHistoricTable
-   * Lista mesi aggregati con totale, conteggio spese e categoria top.
-   * Usato dalla tabella storica in /reports.
-   */
   getHistoricTable: protectedProcedure
     .input(
       z.object({
         months: z.number().min(1).max(24).default(12),
-        // Parte dal mese corrente a ritroso
         fromMonth: z.number().min(1).max(12),
         fromYear: z.number().min(2000).max(2100),
       })
@@ -228,23 +179,17 @@ export const reportRouter = createTRPCRouter({
       const { months, fromMonth, fromYear } = input;
       const userId = ctx.session.user.id;
 
-      // Genera i periodi
       const periods: { month: number; year: number }[] = [];
       for (let i = 0; i < months; i++) {
         let m = fromMonth - i;
         let y = fromYear;
-        while (m <= 0) {
-          m += 12;
-          y -= 1;
-        }
+        while (m <= 0) { m += 12; y -= 1; }
         periods.push({ month: m, year: y });
       }
 
-      // Per ogni periodo: totale + categoria top
       const rows = await Promise.all(
         periods.map(async (p) => {
           const dateRange = buildDateRange(p.month, p.year);
-
           const [aggregate, topCategoryGroup] = await Promise.all([
             ctx.db.expense.aggregate({
               where: { userId, date: dateRange },
@@ -260,7 +205,6 @@ export const reportRouter = createTRPCRouter({
             }),
           ]);
 
-          // Dettagli categoria top
           const topCategoryId = topCategoryGroup[0]?.categoryId;
           const topCategory = topCategoryId
             ? await ctx.db.category.findUnique({
@@ -270,8 +214,7 @@ export const reportRouter = createTRPCRouter({
             : null;
 
           const label = new Date(p.year, p.month - 1, 1).toLocaleDateString(
-            "it-IT",
-            { month: "long", year: "numeric" }
+            "it-IT", { month: "long", year: "numeric" }
           );
 
           return {
@@ -281,10 +224,7 @@ export const reportRouter = createTRPCRouter({
             total: aggregate._sum.amount?.toNumber() ?? 0,
             count: aggregate._count,
             topCategory: topCategory
-              ? {
-                  ...topCategory,
-                  total: topCategoryGroup[0]?._sum.amount?.toNumber() ?? 0,
-                }
+              ? { ...topCategory, total: topCategoryGroup[0]?._sum.amount?.toNumber() ?? 0 }
               : null,
           };
         })
@@ -293,11 +233,6 @@ export const reportRouter = createTRPCRouter({
       return rows;
     }),
 
-  /**
-   * getAnnualComparison
-   * Confronta due anni mese per mese.
-   * Usato dal grouped bar chart nella pagina /reports.
-   */
   getAnnualComparison: protectedProcedure
     .input(
       z.object({
@@ -309,12 +244,8 @@ export const reportRouter = createTRPCRouter({
       const { yearA, yearB } = input;
       const userId = ctx.session.user.id;
 
-      const MONTHS_IT = [
-        "Gen", "Feb", "Mar", "Apr", "Mag", "Giu",
-        "Lug", "Ago", "Set", "Ott", "Nov", "Dic",
-      ];
+      const MONTHS_IT = ["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"];
 
-      // Query parallele per tutti i 12 mesi di entrambi gli anni
       const [totalsA, totalsB] = await Promise.all([
         Promise.all(
           Array.from({ length: 12 }, (_, i) =>
@@ -337,27 +268,76 @@ export const reportRouter = createTRPCRouter({
       const months = MONTHS_IT.map((label, i) => {
         const a = totalsA[i]?._sum.amount?.toNumber() ?? 0;
         const b = totalsB[i]?._sum.amount?.toNumber() ?? 0;
-        const delta =
-          a === 0 ? null : Math.round(((b - a) / a) * 100);
-
+        const delta = a === 0 ? null : Math.round(((b - a) / a) * 100);
         return { month: i + 1, label, [yearA]: a, [yearB]: b, delta };
       });
 
-      const totalA = totalsA.reduce(
-        (sum, t) => sum + (t._sum.amount?.toNumber() ?? 0),
-        0
-      );
-      const totalB = totalsB.reduce(
-        (sum, t) => sum + (t._sum.amount?.toNumber() ?? 0),
-        0
+      const totalA = totalsA.reduce((sum, t) => sum + (t._sum.amount?.toNumber() ?? 0), 0);
+      const totalB = totalsB.reduce((sum, t) => sum + (t._sum.amount?.toNumber() ?? 0), 0);
+      const annualDelta = totalA === 0 ? null : Math.round(((totalB - totalA) / totalA) * 100);
+
+      return { months, summary: { totalA, totalB, annualDelta } };
+    }),
+
+  // ─── NEW: Budget Alerts ───────────────────────────────────────────────────
+  /**
+   * getBudgetAlerts
+   * Restituisce le categorie con budget impostato,
+   * ordinate per percentuale di utilizzo (decrescente).
+   * Usato dal banner della dashboard.
+   */
+  getBudgetAlerts: protectedProcedure
+    .input(monthYearInput)
+    .query(async ({ ctx, input }) => {
+      const { month, year } = input;
+      const userId = ctx.session.user.id;
+
+      // Prende solo le categorie con budget impostato
+      const categories = await ctx.db.category.findMany({
+        where: { userId, budget: { not: null } },
+        select: { id: true, name: true, icon: true, color: true, budget: true },
+      });
+
+      if (categories.length === 0) return [];
+
+      // Calcola spesa del mese per ogni categoria con budget
+      const categoryIds = categories.map((c) => c.id);
+      const grouped = await ctx.db.expense.groupBy({
+        by: ["categoryId"],
+        where: {
+          userId,
+          categoryId: { in: categoryIds },
+          date: buildDateRange(month, year),
+        },
+        _sum: { amount: true },
+      });
+
+      const spentMap = new Map(
+        grouped.map((g) => [g.categoryId, g._sum.amount?.toNumber() ?? 0])
       );
 
-      const annualDelta =
-        totalA === 0 ? null : Math.round(((totalB - totalA) / totalA) * 100);
+      return categories
+        .map((cat) => {
+          const budget = cat.budget!.toNumber();
+          const spent = spentMap.get(cat.id) ?? 0;
+          const percentage = Math.round((spent / budget) * 100);
+          const status =
+            percentage >= 100 ? "over" :
+            percentage >= 80 ? "warning" : "ok";
 
-      return {
-        months,
-        summary: { totalA, totalB, annualDelta },
-      };
+          return {
+            id: cat.id,
+            name: cat.name,
+            icon: cat.icon,
+            color: cat.color,
+            budget,
+            spent,
+            percentage,
+            status,
+          };
+        })
+        // Mostra solo warning e over budget — le "ok" non disturbano
+        .filter((c) => c.status !== "ok")
+        .sort((a, b) => b.percentage - a.percentage);
     }),
 });

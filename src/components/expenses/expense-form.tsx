@@ -23,10 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { RefreshCw } from "lucide-react";
+import { cn } from "~/lib/utils";
 
 // ─── Schema ──────────────────────────────────────────────
 
-const formSchema = z.object({
+const baseSchema = z.object({
   amount: z
     .string()
     .min(1, "L'importo è obbligatorio")
@@ -39,9 +41,20 @@ const formSchema = z.object({
     .max(255, "Max 255 caratteri"),
   date: z.string().min(1, "La data è obbligatoria"),
   categoryId: z.string().min(1, "Seleziona una categoria"),
+  isRecurring: z.boolean(),
+  recurringFrequency: z.enum(["monthly", "weekly", "yearly"]).optional(),
+  recurringEndDate: z.string().optional(),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+const formSchema = baseSchema.refine(
+  (data) => !data.isRecurring || !!data.recurringFrequency,
+  {
+    message: "Seleziona la frequenza di ripetizione",
+    path: ["recurringFrequency"],
+  }
+);
+
+type FormValues = z.infer<typeof baseSchema>;
 
 // ─── Props ────────────────────────────────────────────────
 
@@ -52,16 +65,26 @@ interface ExpenseFormProps {
     description: string;
     date: Date;
     categoryId: string;
+    isRecurring?: boolean;
+    recurringFrequency?: string | null;
+    recurringEndDate?: Date | null;
   };
   onSuccess: () => void;
 }
+
+// ─── Frequency label map ──────────────────────────────────
+
+const FREQUENCY_OPTIONS = [
+  { value: "monthly", label: "Ogni mese" },
+  { value: "weekly", label: "Ogni settimana" },
+  { value: "yearly", label: "Ogni anno" },
+] as const;
 
 // ─── Component ───────────────────────────────────────────
 
 export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
   const isEditing = !!expense;
   const utils = api.useUtils();
-
   const { data: categories } = api.category.getAll.useQuery();
 
   const form = useForm<FormValues>({
@@ -71,19 +94,31 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
       description: expense?.description ?? "",
       date: expense ? formatDateInput(expense.date) : formatDateInput(new Date()),
       categoryId: expense?.categoryId ?? "",
+      isRecurring: expense?.isRecurring ?? false,
+      recurringFrequency:
+        (expense?.recurringFrequency as "monthly" | "weekly" | "yearly" | undefined) ?? undefined,
+      recurringEndDate: expense?.recurringEndDate
+        ? formatDateInput(expense.recurringEndDate)
+        : "",
     },
   });
 
+  const isRecurring = form.watch("isRecurring");
+
   // ─── Mutations ─────────────────────────────────────────
+
+  const invalidateAll = async () => {
+    await Promise.all([
+      utils.expense.getAll.invalidate(),
+      utils.report.getSummary.invalidate(),
+      utils.report.getByCategory.invalidate(),
+      utils.report.getMonthlyTrend.invalidate(),
+    ]);
+  };
 
   const createMutation = api.expense.create.useMutation({
     onSuccess: async () => {
-      await Promise.all([
-        utils.expense.getAll.invalidate(),
-        utils.report.getSummary.invalidate(),
-        utils.report.getByCategory.invalidate(),
-        utils.report.getMonthlyTrend.invalidate(),
-      ]);
+      await invalidateAll();
       toast.success("Spesa aggiunta");
       onSuccess();
     },
@@ -92,12 +127,7 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
 
   const updateMutation = api.expense.update.useMutation({
     onSuccess: async () => {
-      await Promise.all([
-        utils.expense.getAll.invalidate(),
-        utils.report.getSummary.invalidate(),
-        utils.report.getByCategory.invalidate(),
-        utils.report.getMonthlyTrend.invalidate(),
-      ]);
+      await invalidateAll();
       toast.success("Spesa aggiornata");
       onSuccess();
     },
@@ -112,6 +142,12 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
       description: values.description,
       date: new Date(values.date),
       categoryId: values.categoryId,
+      isRecurring: values.isRecurring,
+      recurringFrequency: values.isRecurring ? values.recurringFrequency : undefined,
+      recurringEndDate:
+        values.isRecurring && values.recurringEndDate
+          ? new Date(values.recurringEndDate)
+          : undefined,
     };
 
     if (isEditing) {
@@ -136,13 +172,7 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
             <FormItem>
               <FormLabel>Importo (€)</FormLabel>
               <FormControl>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  placeholder="0.00"
-                  {...field}
-                />
+                <Input type="number" step="0.01" min="0.01" placeholder="0.00" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -157,7 +187,7 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
             <FormItem>
               <FormLabel>Descrizione</FormLabel>
               <FormControl>
-                <Input placeholder="Es. Spesa al supermercato" {...field} />
+                <Input placeholder="Es. Affitto, abbonamento Netflix..." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -208,6 +238,108 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
             )}
           />
         </div>
+
+        {/* ─── Toggle Ricorrenza ─────────────────────── */}
+        <FormField
+          control={form.control}
+          name="isRecurring"
+          render={({ field }) => (
+            <FormItem>
+              <button
+                type="button"
+                onClick={() => field.onChange(!field.value)}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm transition-colors",
+                  field.value
+                    ? "border-primary/30 bg-primary/5 text-primary"
+                    : "border-border bg-muted/30 text-muted-foreground hover:border-border hover:bg-muted/50"
+                )}
+              >
+                <RefreshCw
+                  className={cn(
+                    "h-4 w-4 shrink-0 transition-transform",
+                    field.value && "animate-spin-slow text-primary"
+                  )}
+                />
+                <div className="flex flex-col gap-0.5">
+                  <span className={cn("font-medium", field.value && "text-primary")}>
+                    Spesa ricorrente
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Ripeti automaticamente questa spesa
+                  </span>
+                </div>
+                {/* Toggle visivo */}
+                <div className="ml-auto">
+                  <div
+                    className={cn(
+                      "relative h-5 w-9 rounded-full transition-colors",
+                      field.value ? "bg-primary" : "bg-muted-foreground/30"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
+                        field.value ? "translate-x-4" : "translate-x-0.5"
+                      )}
+                    />
+                  </div>
+                </div>
+              </button>
+            </FormItem>
+          )}
+        />
+
+        {/* Opzioni ricorrenza — visibili solo se attivo */}
+        {isRecurring && (
+          <div className="flex flex-col gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
+            {/* Frequenza */}
+            <FormField
+              control={form.control}
+              name="recurringFrequency"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Frequenza</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Ogni quanto?" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {FREQUENCY_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Data fine */}
+            <FormField
+              control={form.control}
+              name="recurringEndDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Data fine{" "}
+                    <span className="text-xs font-normal text-muted-foreground">
+                      (opzionale — lascia vuoto per ripetere all&apos;infinito)
+                    </span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        )}
 
         <Button type="submit" disabled={isPending} className="mt-2">
           {isPending

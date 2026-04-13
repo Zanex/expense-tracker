@@ -15,6 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
+import { CommandPaletteTrigger } from "~/components/ui/command-palette";
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -27,15 +28,11 @@ interface HeaderProps {
 
 export function Header({ user, onMenuClick }: HeaderProps) {
   const initials = user?.name
-    ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
+    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase()
     : "U";
 
   return (
-    <header className="flex h-14 items-center justify-between border-b bg-background px-4 md:justify-end md:px-6">
+    <header className="flex h-14 items-center justify-between border-b bg-background px-4 md:px-6">
       {/* Hamburger — solo mobile */}
       <Button
         variant="ghost"
@@ -49,24 +46,29 @@ export function Header({ user, onMenuClick }: HeaderProps) {
       {/* Logo mobile */}
       <span className="text-sm font-bold md:hidden">💰 Expense Tracker</span>
 
+      {/* Centro: barra di ricerca Cmd+K — solo desktop */}
+      <div className="hidden md:flex md:flex-1 md:justify-center">
+        <CommandPaletteTrigger />
+      </div>
+
       {/* Destra: toggle tema + user menu */}
       <div className="flex items-center gap-1">
         <ThemeToggle />
 
         <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <button className="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-accent">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.image ?? ""} alt={user?.name ?? ""} />
-                <AvatarFallback>{initials}</AvatarFallback>
-              </Avatar>
-              <span className="hidden text-sm font-medium md:inline">
-                {user?.name}
-              </span>
-            </button>
+          <DropdownMenuTrigger
+            render={
+              <button className="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-accent">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={user?.image ?? ""} alt={user?.name ?? ""} />
+                  <AvatarFallback>{initials}</AvatarFallback>
+                </Avatar>
+                <span className="hidden text-sm font-medium md:inline">
+                  {user?.name}
+                </span>
+              </button>
             }
-        />
+          />
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuGroup>
               <DropdownMenuLabel className="text-xs text-muted-foreground">

@@ -83,4 +83,13 @@ model Expense {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // ─── Ricorrenza ────────────────────────────────────────
+  isRecurring        Boolean   @default(false)
+  recurringFrequency String?   // "monthly" | "weekly" | "yearly"
+  recurringEndDate   DateTime?
+  recurringParentId  String?   // id della spesa "template" originale
+
+  @@index([userId, date])           // performance dashboard query
+  @@index([userId, isRecurring])    // performance processRecurring
 }

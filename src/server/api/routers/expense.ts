@@ -15,6 +15,10 @@ const expenseCreateSchema = z.object({
     .max(255, "Max 255 caratteri"),
   date: z.date({ required_error: "La data è obbligatoria" }),
   categoryId: z.string().cuid("Categoria non valida"),
+  // Ricorrenza — opzionale
+  isRecurring: z.boolean().default(false),
+  recurringFrequency: z.enum(["monthly", "weekly", "yearly"]).optional(),
+  recurringEndDate: z.date().optional(),
 });
 
 const expenseUpdateSchema = z.object({
@@ -31,15 +35,18 @@ const expenseUpdateSchema = z.object({
     .optional(),
   date: z.date().optional(),
   categoryId: z.string().cuid("Categoria non valida").optional(),
+  isRecurring: z.boolean().optional(),
+  recurringFrequency: z.enum(["monthly", "weekly", "yearly"]).optional().nullable(),
+  recurringEndDate: z.date().optional().nullable(),
 });
 
 const expenseFiltersSchema = z.object({
   month: z.number().min(1).max(12).optional(),
   year: z.number().min(2000).max(2100).optional(),
   categoryId: z.string().cuid().optional(),
-  search: z.string().max(100).optional(),       // ricerca per descrizione
-  amountMin: z.number().positive().optional(),  // importo minimo
-  amountMax: z.number().positive().optional(),  // importo massimo
+  search: z.string().max(100).optional(),
+  amountMin: z.number().positive().optional(),
+  amountMax: z.number().positive().optional(),
   page: z.number().min(1).default(1),
   limit: z.number().min(1).max(100).default(20),
 });
@@ -54,10 +61,24 @@ function buildDateFilter(month?: number, year?: number) {
   };
 }
 
+/**
+ * Calcola la prossima data di ricorrenza a partire da una data base.
+ * Es: monthly "01/01/2026" → "01/02/2026"
+ */
+function getNextRecurringDate(
+  baseDate: Date,
+  frequency: "monthly" | "weekly" | "yearly"
+): Date {
+  const next = new Date(baseDate);
+  if (frequency === "monthly") next.setMonth(next.getMonth() + 1);
+  if (frequency === "weekly") next.setDate(next.getDate() + 7);
+  if (frequency === "yearly") next.setFullYear(next.getFullYear() + 1);
+  return next;
+}
+
 // ─── Router ──────────────────────────────────────────────
 
 export const expenseRouter = createTRPCRouter({
-  // Lista paginata con filtri opzionali
   getAll: protectedProcedure
     .input(expenseFiltersSchema)
     .query(async ({ ctx, input }) => {
@@ -66,18 +87,11 @@ export const expenseRouter = createTRPCRouter({
 
       const where = {
         userId: ctx.session.user.id,
-        ...(buildDateFilter(month, year) && {
-          date: buildDateFilter(month, year),
-        }),
+        ...(buildDateFilter(month, year) && { date: buildDateFilter(month, year) }),
         ...(categoryId && { categoryId }),
-        // Ricerca full-text sulla descrizione (case-insensitive)
         ...(search && {
-          description: {
-            contains: search,
-            mode: "insensitive" as const,
-          },
+          description: { contains: search, mode: "insensitive" as const },
         }),
-        // Filtro importo minimo e massimo
         ...((amountMin ?? amountMax) && {
           amount: {
             ...(amountMin && { gte: amountMin }),
@@ -86,7 +100,6 @@ export const expenseRouter = createTRPCRouter({
         }),
       };
 
-      // Query parallele per dati e conteggio totale
       const [expenses, totalCount] = await Promise.all([
         ctx.db.expense.findMany({
           where,
@@ -111,7 +124,6 @@ export const expenseRouter = createTRPCRouter({
       };
     }),
 
-  // Singola spesa per id (usata nel form di edit)
   getById: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
@@ -119,72 +131,47 @@ export const expenseRouter = createTRPCRouter({
         where: { id: input.id, userId: ctx.session.user.id },
         include: { category: true },
       });
-
-      if (!expense) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Spesa non trovata",
-        });
-      }
-
+      if (!expense) throw new TRPCError({ code: "NOT_FOUND", message: "Spesa non trovata" });
       return expense;
     }),
 
-  // Crea nuova spesa
   create: protectedProcedure
     .input(expenseCreateSchema)
     .mutation(async ({ ctx, input }) => {
-      // Verifica che la categoria appartenga all'utente
       const category = await ctx.db.category.findUnique({
         where: { id: input.categoryId, userId: ctx.session.user.id },
       });
+      if (!category) throw new TRPCError({ code: "NOT_FOUND", message: "Categoria non trovata" });
 
-      if (!category) {
+      // Validazione: se ricorrente deve avere la frequenza
+      if (input.isRecurring && !input.recurringFrequency) {
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Categoria non trovata",
+          code: "BAD_REQUEST",
+          message: "Specifica la frequenza di ricorrenza",
         });
       }
 
       return ctx.db.expense.create({
-        data: {
-          ...input,
-          userId: ctx.session.user.id,
-        },
+        data: { ...input, userId: ctx.session.user.id },
         include: { category: true },
       });
     }),
 
-  // Aggiorna spesa esistente
   update: protectedProcedure
     .input(expenseUpdateSchema)
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
 
-      // Verifica che la spesa appartenga all'utente
       const expense = await ctx.db.expense.findUnique({
         where: { id, userId: ctx.session.user.id },
       });
+      if (!expense) throw new TRPCError({ code: "NOT_FOUND", message: "Spesa non trovata" });
 
-      if (!expense) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Spesa non trovata",
-        });
-      }
-
-      // Se si cambia categoria, verifica che la nuova appartenga all'utente
       if (data.categoryId) {
         const category = await ctx.db.category.findUnique({
           where: { id: data.categoryId, userId: ctx.session.user.id },
         });
-
-        if (!category) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Categoria non trovata",
-          });
-        }
+        if (!category) throw new TRPCError({ code: "NOT_FOUND", message: "Categoria non trovata" });
       }
 
       return ctx.db.expense.update({
@@ -194,98 +181,157 @@ export const expenseRouter = createTRPCRouter({
       });
     }),
 
-  // Elimina spesa
   delete: protectedProcedure
     .input(z.object({ id: z.string().cuid() }))
     .mutation(async ({ ctx, input }) => {
       const expense = await ctx.db.expense.findUnique({
         where: { id: input.id, userId: ctx.session.user.id },
       });
-
-      if (!expense) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Spesa non trovata",
-        });
-      }
+      if (!expense) throw new TRPCError({ code: "NOT_FOUND", message: "Spesa non trovata" });
 
       return ctx.db.expense.delete({
         where: { id: input.id, userId: ctx.session.user.id },
       });
     }),
 
-  // Import batch di spese (usato dall'import CSV/XLSX)
   importBatch: protectedProcedure
     .input(
       z.object({
         expenses: z
-          .array(
-            z.object({
-              amount: z.number().positive(),
-              description: z.string().min(1).max(255),
-              date: z.date(),
-              categoryId: z.string().cuid(),
-            })
-          )
+          .array(z.object({
+            amount: z.number().positive(),
+            description: z.string().min(1).max(255),
+            date: z.date(),
+            categoryId: z.string().cuid(),
+          }))
           .min(1)
           .max(500),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
-
-      // Verifica che tutte le categorie appartengano all'utente
-      const categoryIds = [
-        ...new Set(input.expenses.map((e) => e.categoryId)),
-      ];
+      const categoryIds = [...new Set(input.expenses.map((e) => e.categoryId))];
       const validCategories = await ctx.db.category.findMany({
         where: { id: { in: categoryIds }, userId },
         select: { id: true },
       });
-
       const validIds = new Set(validCategories.map((c) => c.id));
       const invalidIds = categoryIds.filter((id) => !validIds.has(id));
-
       if (invalidIds.length > 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Categorie non valide: ${invalidIds.join(", ")}`,
-        });
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Categorie non valide: ${invalidIds.join(", ")}` });
       }
-
-      // Inserimento in transazione — o tutte o nessuna
       const result = await ctx.db.$transaction(
-        input.expenses.map((expense) =>
-          ctx.db.expense.create({
-            data: { ...expense, userId },
-          })
-        )
+        input.expenses.map((expense) => ctx.db.expense.create({ data: { ...expense, userId } }))
       );
-
       return { imported: result.length };
     }),
 
-  // Totale spese per il mese corrente (usato dalla dashboard nella Fase 2)
   getMonthlyTotal: protectedProcedure
-    .input(
-      z.object({
-        month: z.number().min(1).max(12),
-        year: z.number().min(2000).max(2100),
-      })
-    )
+    .input(z.object({
+      month: z.number().min(1).max(12),
+      year: z.number().min(2000).max(2100),
+    }))
     .query(async ({ ctx, input }) => {
       const result = await ctx.db.expense.aggregate({
-        where: {
-          userId: ctx.session.user.id,
-          date: buildDateFilter(input.month, input.year),
-        },
+        where: { userId: ctx.session.user.id, date: buildDateFilter(input.month, input.year) },
         _sum: { amount: true },
         _count: true,
       });
+      return { total: result._sum.amount?.toNumber() ?? 0, count: result._count };
+    }),
 
-      return {
-        total: result._sum.amount?.toNumber() ?? 0,
-        count: result._count,
-      };
+  // ─── NEW: Process Recurring ───────────────────────────────────────────────
+  /**
+   * processRecurring
+   * Crea le istanze mancanti delle spese ricorrenti.
+   * Da chiamare al caricamento della dashboard.
+   *
+   * Logica:
+   * 1. Trova tutte le spese "template" (isRecurring=true, recurringParentId=null)
+   * 2. Per ognuna, trova l'ultima istanza creata (o usa la data originale)
+   * 3. Se la prossima data è ≤ oggi, crea la nuova istanza e aggiorna il ciclo
+   */
+  processRecurring: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const userId = ctx.session.user.id;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Prende tutti i template ricorrenti attivi
+      const templates = await ctx.db.expense.findMany({
+        where: {
+          userId,
+          isRecurring: true,
+          recurringParentId: null, // solo i template, non le copie
+          // Non scaduti
+          OR: [
+            { recurringEndDate: null },
+            { recurringEndDate: { gte: today } },
+          ],
+        },
+      });
+
+      if (templates.length === 0) return { created: 0 };
+
+      const created: string[] = [];
+
+      for (const template of templates) {
+        if (!template.recurringFrequency) continue;
+        const frequency = template.recurringFrequency as "monthly" | "weekly" | "yearly";
+
+        // Trova l'ultima istanza creata da questo template
+        const lastInstance = await ctx.db.expense.findFirst({
+          where: { userId, recurringParentId: template.id },
+          orderBy: { date: "desc" },
+        });
+
+        // Punto di partenza: ultima istanza o template stesso
+        let nextDate = getNextRecurringDate(
+          lastInstance?.date ?? template.date,
+          frequency
+        );
+
+        // Crea tutte le istanze mancanti fino a oggi
+        while (nextDate <= today) {
+          // Controlla che non superi la data di fine
+          if (template.recurringEndDate && nextDate > template.recurringEndDate) break;
+
+          await ctx.db.expense.create({
+            data: {
+              amount: template.amount,
+              description: template.description,
+              date: nextDate,
+              categoryId: template.categoryId,
+              userId,
+              isRecurring: false,            // le copie non sono template
+              recurringParentId: template.id, // link al template originale
+            },
+          });
+
+          created.push(template.id);
+          nextDate = getNextRecurringDate(nextDate, frequency);
+        }
+      }
+
+      return { created: created.length };
+    }),
+
+  // Lista spese ricorrenti attive (per la gestione)
+  getRecurring: protectedProcedure
+    .query(async ({ ctx }) => {
+      const today = new Date();
+      return ctx.db.expense.findMany({
+        where: {
+          userId: ctx.session.user.id,
+          isRecurring: true,
+          recurringParentId: null,
+          OR: [
+            { recurringEndDate: null },
+            { recurringEndDate: { gte: today } },
+          ],
+        },
+        include: { category: true },
+        orderBy: { date: "desc" },
+      });
     }),
 });
