@@ -1,7 +1,8 @@
-import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "~/lib/auth";
 import { DashboardShell } from "~/components/layout/dashboard-shell";
+import { CommandPalette } from "~/components/ui/command-palette";
+import { Suspense } from "react";
 
 export default async function DashboardLayout({
   children,
@@ -14,7 +15,9 @@ export default async function DashboardLayout({
   return (
     <DashboardShell user={session.user}>
       <Suspense fallback={null}>
-        {children}
+      {/* Command palette montata qui → disponibile su ogni pagina dashboard */}
+      <CommandPalette />
+      {children}
       </Suspense>
     </DashboardShell>
   );

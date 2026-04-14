@@ -334,4 +334,97 @@ export const expenseRouter = createTRPCRouter({
         orderBy: { date: "desc" },
       });
     }),
+
+  // ─── NEW: Upcoming Recurring ─────────────────────────────────────────────
+  /**
+   * getUpcomingRecurring
+   * Calcola le spese ricorrenti attese nel mese corrente
+   * che NON sono ancora state generate (utile per il widget dashboard).
+   */
+  getUpcomingRecurring: protectedProcedure
+    .input(
+      z.object({
+        month: z.number().min(1).max(12),
+        year: z.number().min(2000).max(2100),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { month, year } = input;
+      const userId = ctx.session.user.id;
+
+      // Inizio e fine mese richiesto
+      const monthStart = new Date(year, month - 1, 1);
+      const monthEnd = new Date(year, month, 1);
+
+      // Tutti i template attivi
+      const templates = await ctx.db.expense.findMany({
+        where: {
+          userId,
+          isRecurring: true,
+          recurringParentId: null,
+          OR: [
+            { recurringEndDate: null },
+            { recurringEndDate: { gte: monthStart } },
+          ],
+        },
+        include: { category: true },
+      });
+
+      if (templates.length === 0) return [];
+
+      const upcoming: {
+        templateId: string;
+        description: string;
+        amount: number;
+        expectedDate: Date;
+        category: { id: string; name: string; icon: string | null; color: string | null };
+        frequency: string;
+        alreadyCreated: boolean;
+      }[] = [];
+
+      for (const template of templates) {
+        if (!template.recurringFrequency) continue;
+        const freq = template.recurringFrequency as "monthly" | "weekly" | "yearly";
+
+        // Ultima istanza creata
+        const lastInstance = await ctx.db.expense.findFirst({
+          where: { userId, recurringParentId: template.id },
+          orderBy: { date: "desc" },
+        });
+
+        const baseDate = lastInstance?.date ?? template.date;
+        const nextDate = getNextRecurringDate(baseDate, freq);
+
+        // La prossima occorrenza cade nel mese richiesto?
+        if (nextDate >= monthStart && nextDate < monthEnd) {
+          // È già stata creata in questo mese?
+          const alreadyCreated = await ctx.db.expense.findFirst({
+            where: {
+              userId,
+              recurringParentId: template.id,
+              date: { gte: monthStart, lt: monthEnd },
+            },
+          });
+
+          upcoming.push({
+            templateId: template.id,
+            description: template.description,
+            amount: template.amount.toNumber(),
+            expectedDate: nextDate,
+            category: {
+              id: template.category.id,
+              name: template.category.name,
+              icon: template.category.icon,
+              color: template.category.color,
+            },
+            frequency: freq,
+            alreadyCreated: !!alreadyCreated,
+          });
+        }
+      }
+
+      return upcoming.sort(
+        (a, b) => a.expectedDate.getTime() - b.expectedDate.getTime()
+      );
+    }),
 });

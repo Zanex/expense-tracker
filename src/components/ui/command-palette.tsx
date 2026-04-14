@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 import { formatCurrency, formatDate, toNumber } from "~/lib/utils";
@@ -60,39 +60,43 @@ export function CommandPalette() {
   });
 
   // Costruisce i risultati
-  const results: ResultItem[] = [];
+  const results = useMemo(() => {
+    const res: ResultItem[] = [];
 
-  if (debouncedQuery.length >= 2) {
-    // Spese che matchano
-    expenseData?.expenses.forEach((e) => {
-      results.push({
-        type: "expense",
-        id: e.id,
-        description: e.description,
-        amount: toNumber(e.amount),
-        date: e.date,
-        categoryName: e.category.name,
-        categoryColor: e.category.color,
-        categoryIcon: e.category.icon,
+    if (debouncedQuery.length >= 2) {
+      // Spese che matchano
+      expenseData?.expenses.forEach((e) => {
+        res.push({
+          type: "expense",
+          id: e.id,
+          description: e.description,
+          amount: toNumber(e.amount),
+          date: e.date,
+          categoryName: e.category.name,
+          categoryColor: e.category.color,
+          categoryIcon: e.category.icon,
+        });
+      });
+    }
+
+    // Categorie filtrate per nome
+    const filteredCategories = (categories ?? []).filter(
+      (c) =>
+        debouncedQuery.length < 2 ||
+        c.name.toLowerCase().includes(debouncedQuery.toLowerCase())
+    );
+    filteredCategories.slice(0, 3).forEach((c) => {
+      res.push({
+        type: "category",
+        id: c.id,
+        name: c.name,
+        icon: c.icon,
+        color: c.color,
       });
     });
-  }
 
-  // Categorie filtrate per nome
-  const filteredCategories = (categories ?? []).filter(
-    (c) =>
-      debouncedQuery.length < 2 ||
-      c.name.toLowerCase().includes(debouncedQuery.toLowerCase())
-  );
-  filteredCategories.slice(0, 3).forEach((c) => {
-    results.push({
-      type: "category",
-      id: c.id,
-      name: c.name,
-      icon: c.icon,
-      color: c.color,
-    });
-  });
+    return res;
+  }, [debouncedQuery, expenseData?.expenses, categories]);
 
   // Reset active index quando cambiano i risultati
   useEffect(() => {

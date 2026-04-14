@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import { toast } from "sonner";
-import { Plus, Receipt, Pencil, Trash2, Upload } from "lucide-react";
-import { formatCurrency, formatDate, toNumber } from "~/lib/utils";
+import { Plus, Receipt, Pencil, Trash2, Upload, RefreshCw } from "lucide-react";
+import { formatCurrency, formatDate, getCurrentMonth, getCurrentYear, toNumber } from "~/lib/utils";
 import { useDebounce } from "~/hooks/use-debounce";
 import { ImportDialog } from "./import-dialog";
 import { Button } from "~/components/ui/button";
@@ -38,18 +38,15 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { ExpenseForm } from "./expense-form";
 import { ExpenseFilters, type ExpenseFilters as Filters } from "./expense-filters";
 import { Pagination } from "./pagination";
+import { cn } from "~/lib/utils";
 
 // ─── Component ───────────────────────────────────────────
 
-interface ExpenseListProps {
-  month: number;
-  year: number;
-}
-
-export function ExpenseList({ month, year }: ExpenseListProps) {
-  // ─── State ───────────────────────────────────────────
-
-  const [filters, setFilters] = useState<Filters>({});
+export function ExpenseList() {
+  const [filters, setFilters] = useState<Filters>({
+    month: getCurrentMonth(),
+    year: getCurrentYear(),
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -58,12 +55,8 @@ export function ExpenseList({ month, year }: ExpenseListProps) {
 
   const debouncedSearch = useDebounce(filters.search, 300);
 
-  // ─── Query ───────────────────────────────────────────
-
   const { data, isLoading } = api.expense.getAll.useQuery({
     ...filters,
-    month,
-    year,
     search: debouncedSearch,
     page: currentPage,
     limit: 10,
@@ -74,8 +67,6 @@ export function ExpenseList({ month, year }: ExpenseListProps) {
     { enabled: !!editingId }
   );
 
-  // ─── Mutations ───────────────────────────────────────
-
   const utils = api.useUtils();
 
   const deleteMutation = api.expense.delete.useMutation({
@@ -85,6 +76,7 @@ export function ExpenseList({ month, year }: ExpenseListProps) {
         utils.report.getSummary.invalidate(),
         utils.report.getByCategory.invalidate(),
         utils.report.getMonthlyTrend.invalidate(),
+        utils.report.getBudgetAlerts.invalidate(),
       ]);
       toast.success("Spesa eliminata");
       setDeletingId(null);
@@ -95,11 +87,9 @@ export function ExpenseList({ month, year }: ExpenseListProps) {
     },
   });
 
-  // ─── Handlers ────────────────────────────────────────
-
   function handleFiltersChange(newFilters: Filters) {
     setFilters(newFilters);
-    setCurrentPage(1); // reset pagina quando cambiano i filtri
+    setCurrentPage(1);
   }
 
   function handleOpenCreate() {
@@ -122,8 +112,6 @@ export function ExpenseList({ month, year }: ExpenseListProps) {
     deleteMutation.mutate({ id: deletingId });
   }
 
-  // ─── Loading ─────────────────────────────────────────
-
   if (isLoading) {
     return (
       <div className="flex flex-col gap-3">
@@ -140,19 +128,14 @@ export function ExpenseList({ month, year }: ExpenseListProps) {
   const expenses = data?.expenses ?? [];
   const pagination = data?.pagination;
 
-  // ─── Render ──────────────────────────────────────────
-
   return (
     <>
       <div className="flex flex-col gap-4">
-        {/* Filtri + bottone aggiungi + import */}
+        {/* Filtri + bottoni */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <ExpenseFilters filters={filters} onChange={handleFiltersChange} />
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setImportOpen(true)}
-            >
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
               <Upload className="mr-2 h-4 w-4" />
               Importa
             </Button>
@@ -169,19 +152,16 @@ export function ExpenseList({ month, year }: ExpenseListProps) {
             icon={Receipt}
             title="Nessuna spesa"
             description={
-              month ?? year ?? filters.categoryId ?? filters.search ?? filters.amountMin ?? filters.amountMax
+              filters.month ?? filters.year ?? filters.categoryId ?? filters.search ?? filters.amountMin ?? filters.amountMax
                 ? "Nessuna spesa trovata con i filtri selezionati."
                 : "Aggiungi la tua prima spesa per iniziare."
             }
-            action={{
-              label: "Aggiungi spesa",
-              onClick: handleOpenCreate,
-            }}
+            action={{ label: "Aggiungi spesa", onClick: handleOpenCreate }}
           />
         ) : (
           <>
             <div className="rounded-lg border bg-card">
-              {/* Vista tabella — desktop */}
+              {/* Desktop */}
               <div className="hidden md:block">
                 <Table>
                   <TableHeader>
@@ -194,15 +174,106 @@ export function ExpenseList({ month, year }: ExpenseListProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {expenses.map((expense) => (
-                      <TableRow key={expense.id} className="group">
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDate(expense.date)}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {expense.description}
-                        </TableCell>
-                        <TableCell>
+                    {expenses.map((expense) => {
+                      // È un'istanza generata da una ricorrenza
+                      const isRecurringInstance = !!expense.recurringParentId;
+                      // È il template originale ricorrente
+                      const isRecurringTemplate = expense.isRecurring && !expense.recurringParentId;
+
+                      return (
+                        <TableRow key={expense.id} className="group">
+                          <TableCell className="text-sm text-muted-foreground">
+                            {formatDate(expense.date)}
+                          </TableCell>
+
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{expense.description}</span>
+                              {/* Badge ricorrente */}
+                              {(isRecurringInstance || isRecurringTemplate) && (
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                                    isRecurringTemplate
+                                      ? "bg-primary/10 text-primary"
+                                      : "bg-muted text-muted-foreground"
+                                  )}
+                                  title={
+                                    isRecurringTemplate
+                                      ? "Template ricorrente"
+                                      : "Generata da ricorrenza"
+                                  }
+                                >
+                                  <RefreshCw className="h-2.5 w-2.5" />
+                                  {isRecurringTemplate ? "ricorrente" : "auto"}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          <TableCell>
+                            <Badge
+                              variant="secondary"
+                              style={{
+                                backgroundColor: expense.category.color ?? "#6366f1",
+                                color: "#fff",
+                              }}
+                            >
+                              {expense.category.icon ?? "📁"} {expense.category.name}
+                            </Badge>
+                          </TableCell>
+
+                          <TableCell className="text-right font-semibold tabular-nums">
+                            {formatCurrency(toNumber(expense.amount))}
+                          </TableCell>
+
+                          <TableCell>
+                            <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleOpenEdit(expense.id)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => setDeletingId(expense.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile */}
+              <div className="flex flex-col divide-y md:hidden">
+                {expenses.map((expense) => {
+                  const isRecurringInstance = !!expense.recurringParentId;
+                  const isRecurringTemplate = expense.isRecurring && !expense.recurringParentId;
+
+                  return (
+                    <div key={expense.id} className="flex items-start justify-between p-4">
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-medium">{expense.description}</p>
+                          {(isRecurringInstance || isRecurringTemplate) && (
+                            <RefreshCw
+                              className={cn(
+                                "h-3 w-3",
+                                isRecurringTemplate ? "text-primary" : "text-muted-foreground"
+                              )}
+                            />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
                           <Badge
                             variant="secondary"
                             style={{
@@ -212,81 +283,37 @@ export function ExpenseList({ month, year }: ExpenseListProps) {
                           >
                             {expense.category.icon ?? "📁"} {expense.category.name}
                           </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-semibold tabular-nums">
-                          {formatCurrency(toNumber(expense.amount))}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleOpenEdit(expense.id)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => setDeletingId(expense.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* Vista card — mobile */}
-              <div className="flex flex-col divide-y md:hidden">
-                {expenses.map((expense) => (
-                  <div key={expense.id} className="flex items-start justify-between p-4">
-                    <div className="flex flex-col gap-1.5">
-                      <p className="font-medium">{expense.description}</p>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDate(expense.date)}
+                          </span>
+                        </div>
+                      </div>
                       <div className="flex items-center gap-2">
-                        <Badge
-                          variant="secondary"
-                          style={{
-                            backgroundColor: expense.category.color ?? "#6366f1",
-                            color: "#fff",
-                          }}
-                        >
-                          {expense.category.icon ?? "📁"} {expense.category.name}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDate(expense.date)}
+                        <span className="font-semibold tabular-nums">
+                          {formatCurrency(toNumber(expense.amount))}
                         </span>
+                        <div className="flex gap-0.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleOpenEdit(expense.id)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => setDeletingId(expense.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold tabular-nums">
-                        {formatCurrency(toNumber(expense.amount))}
-                      </span>
-                      <div className="flex gap-0.5">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleOpenEdit(expense.id)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => setDeletingId(expense.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -304,7 +331,7 @@ export function ExpenseList({ month, year }: ExpenseListProps) {
         )}
       </div>
 
-      {/* Dialog create / edit */}
+      {/* Dialog create/edit */}
       <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -319,10 +346,7 @@ export function ExpenseList({ month, year }: ExpenseListProps) {
               <Skeleton className="h-10 w-full" />
             </div>
           ) : (
-            <ExpenseForm
-              expense={editingExpense ?? undefined}
-              onSuccess={handleDialogClose}
-            />
+            <ExpenseForm expense={editingExpense ?? undefined} onSuccess={handleDialogClose} />
           )}
         </DialogContent>
       </Dialog>
@@ -351,11 +375,9 @@ export function ExpenseList({ month, year }: ExpenseListProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
       {/* Import dialog */}
-      <ImportDialog
-        open={importOpen}
-        onClose={() => setImportOpen(false)}
-      />
+      <ImportDialog open={importOpen} onClose={() => setImportOpen(false)} />
     </>
   );
 }

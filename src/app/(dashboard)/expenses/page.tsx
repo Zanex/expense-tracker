@@ -2,7 +2,7 @@
 
 import { useMonthFilter } from "~/hooks/use-month-filter";
 import { MonthFilterControl } from "~/components/dashboard/month-filter";
-import { ExpenseList } from "~/components/expenses/expense-list";
+import { ExpenseListWithTabs } from "~/components/expenses/expense-list-with-tabs";
 
 export default function ExpensesPage() {
   const filter = useMonthFilter();
@@ -18,7 +18,7 @@ export default function ExpensesPage() {
         </div>
         <MonthFilterControl filter={filter} />
       </div>
-      <ExpenseList month={filter.month} year={filter.year} />
+      <ExpenseListWithTabs />
     </div>
   );
 }

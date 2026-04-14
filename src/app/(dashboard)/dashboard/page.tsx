@@ -1,19 +1,18 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useMonthFilter } from "~/hooks/use-month-filter";
 import { useOnboarding } from "~/hooks/use-onboarding";
-import { useState } from "react";
 import { MonthFilterControl } from "~/components/dashboard/month-filter";
 import { KpiGrid } from "~/components/dashboard/kpi-grid";
 import { BudgetAlerts } from "~/components/dashboard/budget-alerts";
+import { UpcomingRecurring } from "~/components/dashboard/upcoming-recurring";
 import { ExpensesByCategory } from "~/components/charts/expenses-by-category";
 import { MonthlyTrend } from "~/components/charts/monthly-trend";
 import { ExportButton } from "~/components/reports/export-button";
 import { OnboardingWizard } from "~/components/onboarding/onboarding-wizard";
 import { ChartErrorBoundary } from "~/components/ui/chart-error-boundary";
 import { ErrorBoundary } from "~/components/ui/error-boundary";
-import { CommandPalette } from "~/components/ui/command-palette";
 import { api } from "~/trpc/react";
 
 export default function DashboardPage() {
@@ -41,11 +40,7 @@ export default function DashboardPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <>
-      {/* Command palette — globale, accessibile con Cmd+K */}
-      <CommandPalette />
-
-      <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
         {/* Header con filtro mese + export */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -73,6 +68,9 @@ export default function DashboardPage() {
           <KpiGrid month={filter.month} year={filter.year} />
         </ErrorBoundary>
 
+        {/* Ricorrenze in arrivo questo mese */}
+        <UpcomingRecurring month={filter.month} year={filter.year} />
+
         {/* Grafici */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <ChartErrorBoundary title="Spese per categoria">
@@ -83,7 +81,6 @@ export default function DashboardPage() {
             <MonthlyTrend month={filter.month} year={filter.year} months={6} />
           </ChartErrorBoundary>
         </div>
-      </div>
-    </>
+    </div>
   );
 }
