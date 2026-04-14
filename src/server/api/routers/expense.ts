@@ -220,10 +220,10 @@ export const expenseRouter = createTRPCRouter({
       if (invalidIds.length > 0) {
         throw new TRPCError({ code: "BAD_REQUEST", message: `Categorie non valide: ${invalidIds.join(", ")}` });
       }
-      const result = await ctx.db.$transaction(
-        input.expenses.map((expense) => ctx.db.expense.create({ data: { ...expense, userId } }))
-      );
-      return { imported: result.length };
+      const result = await ctx.db.expense.createMany({
+        data: input.expenses.map((expense) => ({ ...expense, userId }))
+      });
+      return { imported: result.count };
     }),
 
   getMonthlyTotal: protectedProcedure
@@ -273,7 +273,7 @@ export const expenseRouter = createTRPCRouter({
 
       if (templates.length === 0) return { created: 0 };
 
-      const created: string[] = [];
+      const toCreate = [];
 
       for (const template of templates) {
         if (!template.recurringFrequency) continue;
@@ -296,24 +296,25 @@ export const expenseRouter = createTRPCRouter({
           // Controlla che non superi la data di fine
           if (template.recurringEndDate && nextDate > template.recurringEndDate) break;
 
-          await ctx.db.expense.create({
-            data: {
-              amount: template.amount,
-              description: template.description,
-              date: nextDate,
-              categoryId: template.categoryId,
-              userId,
-              isRecurring: false,            // le copie non sono template
-              recurringParentId: template.id, // link al template originale
-            },
+          toCreate.push({
+            amount: template.amount,
+            description: template.description,
+            date: nextDate,
+            categoryId: template.categoryId,
+            userId,
+            isRecurring: false,            // le copie non sono template
+            recurringParentId: template.id, // link al template originale
           });
 
-          created.push(template.id);
           nextDate = getNextRecurringDate(nextDate, frequency);
         }
       }
 
-      return { created: created.length };
+      if (toCreate.length > 0) {
+        await ctx.db.expense.createMany({ data: toCreate });
+      }
+
+      return { created: toCreate.length };
     }),
 
   // Lista spese ricorrenti attive (per la gestione)
@@ -393,33 +394,42 @@ export const expenseRouter = createTRPCRouter({
         });
 
         const baseDate = lastInstance?.date ?? template.date;
-        const nextDate = getNextRecurringDate(baseDate, freq);
+        let nextDate = getNextRecurringDate(baseDate, freq);
 
-        // La prossima occorrenza cade nel mese richiesto?
-        if (nextDate >= monthStart && nextDate < monthEnd) {
-          // È già stata creata in questo mese?
-          const alreadyCreated = await ctx.db.expense.findFirst({
-            where: {
-              userId,
-              recurringParentId: template.id,
-              date: { gte: monthStart, lt: monthEnd },
-            },
-          });
+        // Trova le istanze già create nel mese
+        const alreadyCreated = await ctx.db.expense.findMany({
+          where: {
+            userId,
+            recurringParentId: template.id,
+            date: { gte: monthStart, lt: monthEnd },
+          },
+          select: { date: true },
+        });
+        const createdDates = new Set(alreadyCreated.map(e => e.date.getTime()));
 
-          upcoming.push({
-            templateId: template.id,
-            description: template.description,
-            amount: template.amount.toNumber(),
-            expectedDate: nextDate,
-            category: {
-              id: template.category.id,
-              name: template.category.name,
-              icon: template.category.icon,
-              color: template.category.color,
-            },
-            frequency: freq,
-            alreadyCreated: !!alreadyCreated,
-          });
+        // Avanza e aggiungi all'upcoming finché la data target non supera la fine del mese
+        while (nextDate < monthEnd) {
+          // Termina in anticipo se la ricorrenza è scaduta
+          if (template.recurringEndDate && nextDate > template.recurringEndDate) break;
+
+          // La prossima occorrenza cade nel mese richiesto?
+          if (nextDate >= monthStart) {
+            upcoming.push({
+              templateId: template.id,
+              description: template.description,
+              amount: template.amount.toNumber(),
+              expectedDate: nextDate,
+              category: {
+                id: template.category.id,
+                name: template.category.name,
+                icon: template.category.icon,
+                color: template.category.color,
+              },
+              frequency: freq,
+              alreadyCreated: createdDates.has(nextDate.getTime()),
+            });
+          }
+          nextDate = getNextRecurringDate(nextDate, freq);
         }
       }
 

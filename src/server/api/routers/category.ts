@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { TRPCError } from "@trpc/server";
+import { toNumber } from "~/lib/utils";
 
 // ─── Zod Schemas ─────────────────────────────────────────
 
@@ -65,7 +66,7 @@ export const categoryRouter = createTRPCRouter({
     return categories.map((cat) => ({
       ...cat,
       spentThisMonth: cat.expenses.reduce(
-        (sum, e) => sum + e.amount.toNumber(),
+        (sum, e) => sum + toNumber(e.amount),
         0
       ),
       expenses: undefined, // non esporre le singole spese
