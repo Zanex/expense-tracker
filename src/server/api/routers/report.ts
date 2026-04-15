@@ -1,20 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { buildDateRange, getPrevMonth } from "~/lib/recurring";
 
-// ─── Helpers ─────────────────────────────────────────────
-
-function buildDateRange(month: number, year: number) {
-  return {
-    gte: new Date(year, month - 1, 1),
-    lt: new Date(year, month, 1),
-  };
-}
-
-function getPrevMonth(month: number, year: number) {
-  return month === 1
-    ? { month: 12, year: year - 1 }
-    : { month: month - 1, year };
-}
 
 // ─── Input schemas ────────────────────────────────────────
 
@@ -27,7 +14,10 @@ const monthYearInput = z.object({
 
 export const reportRouter = createTRPCRouter({
   getSummary: protectedProcedure
-    .input(monthYearInput)
+    .input(z.object({
+      month: z.number().min(1).max(12),
+      year: z.number().min(2000).max(2100),
+    }))
     .query(async ({ ctx, input }) => {
       const { month, year } = input;
       const userId = ctx.session.user.id;
@@ -137,34 +127,41 @@ export const reportRouter = createTRPCRouter({
       const { month, year, months } = input;
       const userId = ctx.session.user.id;
 
-      const periods: { month: number; year: number; label: string }[] = [];
+      const periods: { month: number; year: number; label: string; start: Date; end: Date }[] = [];
       for (let i = months - 1; i >= 0; i--) {
         let m = month - i;
         let y = year;
         while (m <= 0) { m += 12; y -= 1; }
-        const label = new Date(y, m - 1, 1).toLocaleDateString("it-IT", {
+        const start = new Date(y, m - 1, 1);
+        const end = new Date(y, m, 1);
+        const label = start.toLocaleDateString("it-IT", {
           month: "short", year: "2-digit",
         });
-        periods.push({ month: m, year: y, label });
+        periods.push({ month: m, year: y, label, start, end });
       }
 
-      const totals = await Promise.all(
-        periods.map((p) =>
-          ctx.db.expense.aggregate({
-            where: { userId, date: buildDateRange(p.month, p.year) },
-            _sum: { amount: true },
-            _count: true,
-          })
-        )
-      );
+      const totalRangeStart = periods[0]!.start;
+      const totalRangeEnd = periods[periods.length - 1]!.end;
 
-      return periods.map((p, i) => ({
-        month: p.month,
-        year: p.year,
-        label: p.label,
-        total: totals[i]?._sum.amount?.toNumber() ?? 0,
-        count: totals[i]?._count ?? 0,
-      }));
+      // Unica query per tutto il periodo
+      const expenses = await ctx.db.expense.findMany({
+        where: { userId, date: { gte: totalRangeStart, lt: totalRangeEnd } },
+        select: { amount: true, date: true },
+      });
+
+      return periods.map((p) => {
+        const periodExpenses = expenses.filter(
+          (e) => e.date >= p.start && e.date < p.end
+        );
+        const total = periodExpenses.reduce((sum, e) => sum + e.amount.toNumber(), 0);
+        return {
+          month: p.month,
+          year: p.year,
+          label: p.label,
+          total,
+          count: periodExpenses.length,
+        };
+      });
     }),
 
   getHistoricTable: protectedProcedure
@@ -179,58 +176,65 @@ export const reportRouter = createTRPCRouter({
       const { months, fromMonth, fromYear } = input;
       const userId = ctx.session.user.id;
 
-      const periods: { month: number; year: number }[] = [];
+      const periods: { month: number; year: number; start: Date; end: Date; label: string }[] = [];
       for (let i = 0; i < months; i++) {
         let m = fromMonth - i;
         let y = fromYear;
         while (m <= 0) { m += 12; y -= 1; }
-        periods.push({ month: m, year: y });
+        const start = new Date(y, m - 1, 1);
+        const end = new Date(y, m, 1);
+        const label = start.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+        periods.push({ month: m, year: y, start, end, label });
       }
 
-      const rows = await Promise.all(
-        periods.map(async (p) => {
-          const dateRange = buildDateRange(p.month, p.year);
-          const [aggregate, topCategoryGroup] = await Promise.all([
-            ctx.db.expense.aggregate({
-              where: { userId, date: dateRange },
-              _sum: { amount: true },
-              _count: true,
-            }),
-            ctx.db.expense.groupBy({
-              by: ["categoryId"],
-              where: { userId, date: dateRange },
-              _sum: { amount: true },
-              orderBy: { _sum: { amount: "desc" } },
-              take: 1,
-            }),
-          ]);
+      const totalRangeStart = periods[periods.length - 1]!.start;
+      const totalRangeEnd = periods[0]!.end;
 
-          const topCategoryId = topCategoryGroup[0]?.categoryId;
-          const topCategory = topCategoryId
-            ? await ctx.db.category.findUnique({
-                where: { id: topCategoryId },
-                select: { id: true, name: true, icon: true, color: true },
-              })
-            : null;
+      const expenses = await ctx.db.expense.findMany({
+        where: { userId, date: { gte: totalRangeStart, lt: totalRangeEnd } },
+        select: { amount: true, date: true, categoryId: true },
+      });
 
-          const label = new Date(p.year, p.month - 1, 1).toLocaleDateString(
-            "it-IT", { month: "long", year: "numeric" }
-          );
+      const categoryIds = [...new Set(expenses.map(e => e.categoryId))];
+      const categories = await ctx.db.category.findMany({
+        where: { id: { in: categoryIds } },
+        select: { id: true, name: true, icon: true, color: true },
+      });
+      const categoryMap = new Map(categories.map(c => [c.id, c]));
 
-          return {
-            month: p.month,
-            year: p.year,
-            label,
-            total: aggregate._sum.amount?.toNumber() ?? 0,
-            count: aggregate._count,
-            topCategory: topCategory
-              ? { ...topCategory, total: topCategoryGroup[0]?._sum.amount?.toNumber() ?? 0 }
-              : null,
-          };
-        })
-      );
+      return periods.map((p) => {
+        const periodExpenses = expenses.filter(e => e.date >= p.start && e.date < p.end);
+        const total = periodExpenses.reduce((sum, e) => sum + e.amount.toNumber(), 0);
+        
+        // Calcolo top category per il periodo
+        const catTotals = periodExpenses.reduce((acc, e) => {
+          acc[e.categoryId] = (acc[e.categoryId] ?? 0) + e.amount.toNumber();
+          return acc;
+        }, {} as Record<string, number>);
 
-      return rows;
+        let topCatId = null;
+        let maxAmount = 0;
+        for (const [id, amt] of Object.entries(catTotals)) {
+          if (amt > maxAmount) {
+            maxAmount = amt;
+            topCatId = id;
+          }
+        }
+
+        const topCategory = topCatId ? categoryMap.get(topCatId) : null;
+
+        return {
+          month: p.month,
+          year: p.year,
+          label: p.label,
+          total,
+          count: periodExpenses.length,
+          topCategory: topCategory ? {
+            ...topCategory,
+            total: maxAmount
+          } : null,
+        };
+      });
     }),
 
   getAnnualComparison: protectedProcedure
@@ -243,37 +247,39 @@ export const reportRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const { yearA, yearB } = input;
       const userId = ctx.session.user.id;
-
       const MONTHS_IT = ["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"];
 
-      const [totalsA, totalsB] = await Promise.all([
-        Promise.all(
-          Array.from({ length: 12 }, (_, i) =>
-            ctx.db.expense.aggregate({
-              where: { userId, date: buildDateRange(i + 1, yearA) },
-              _sum: { amount: true },
-            })
-          )
-        ),
-        Promise.all(
-          Array.from({ length: 12 }, (_, i) =>
-            ctx.db.expense.aggregate({
-              where: { userId, date: buildDateRange(i + 1, yearB) },
-              _sum: { amount: true },
-            })
-          )
-        ),
+      const [expensesA, expensesB] = await Promise.all([
+        ctx.db.expense.findMany({
+          where: { userId, date: { gte: new Date(yearA, 0, 1), lt: new Date(yearA + 1, 0, 1) } },
+          select: { amount: true, date: true },
+        }),
+        ctx.db.expense.findMany({
+          where: { userId, date: { gte: new Date(yearB, 0, 1), lt: new Date(yearB + 1, 0, 1) } },
+          select: { amount: true, date: true },
+        }),
       ]);
 
+      const getMonthlyTotals = (exps: { amount: { toNumber: () => number }; date: Date }[]) => {
+        const totals = Array(12).fill(0);
+        exps.forEach(e => {
+          totals[e.date.getMonth()] += e.amount.toNumber();
+        });
+        return totals;
+      };
+
+      const totalsA = getMonthlyTotals(expensesA);
+      const totalsB = getMonthlyTotals(expensesB);
+
       const months = MONTHS_IT.map((label, i) => {
-        const a = totalsA[i]?._sum.amount?.toNumber() ?? 0;
-        const b = totalsB[i]?._sum.amount?.toNumber() ?? 0;
+        const a = totalsA[i];
+        const b = totalsB[i];
         const delta = a === 0 ? null : Math.round(((b - a) / a) * 100);
         return { month: i + 1, label, [yearA]: a, [yearB]: b, delta };
       });
 
-      const totalA = totalsA.reduce((sum, t) => sum + (t._sum.amount?.toNumber() ?? 0), 0);
-      const totalB = totalsB.reduce((sum, t) => sum + (t._sum.amount?.toNumber() ?? 0), 0);
+      const totalA = totalsA.reduce((sum, t) => sum + t, 0);
+      const totalB = totalsB.reduce((sum, t) => sum + t, 0);
       const annualDelta = totalA === 0 ? null : Math.round(((totalB - totalA) / totalA) * 100);
 
       return { months, summary: { totalA, totalB, annualDelta } };

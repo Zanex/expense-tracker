@@ -140,10 +140,10 @@ describe("reportRouter.getMonthlyTrend", () => {
   it("restituisce N periodi mensili", async () => {
     const { caller, db } = makeCaller();
 
-    db.expense.aggregate.mockResolvedValue({
-      _sum: { amount: { toNumber: () => 100 } },
-      _count: 2,
-    });
+    db.expense.findMany.mockResolvedValue([
+      { amount: { toNumber: () => 50 }, date: new Date(2026, 2, 10) },
+      { amount: { toNumber: () => 50 }, date: new Date(2026, 2, 11) },
+    ]);
 
     const result = await caller.getMonthlyTrend({
       month: 3,
@@ -157,10 +157,7 @@ describe("reportRouter.getMonthlyTrend", () => {
   it("il totale di ogni periodo è 0 se nessuna spesa", async () => {
     const { caller, db } = makeCaller();
 
-    db.expense.aggregate.mockResolvedValue({
-      _sum: { amount: null },
-      _count: 0,
-    });
+    db.expense.findMany.mockResolvedValue([]);
 
     const result = await caller.getMonthlyTrend({
       month: 3,
@@ -174,10 +171,10 @@ describe("reportRouter.getMonthlyTrend", () => {
   it("gestisce correttamente il cambio anno nei periodi", async () => {
     const { caller, db } = makeCaller();
 
-    db.expense.aggregate.mockResolvedValue({
-      _sum: { amount: { toNumber: () => 50 } },
-      _count: 1,
-    });
+    db.expense.findMany.mockResolvedValue([
+      { amount: { toNumber: () => 50 }, date: new Date(2026, 2, 1) },
+      { amount: { toNumber: () => 50 }, date: new Date(2025, 10, 1) },
+    ]);
 
     // Marzo 2026, 6 mesi → dovrebbe includere Ottobre 2025
     const result = await caller.getMonthlyTrend({

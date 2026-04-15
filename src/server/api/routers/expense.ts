@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { TRPCError } from "@trpc/server";
+import { getNextRecurringDate, buildDateRange } from "~/lib/recurring";
+
 
 // ─── Zod Schemas ─────────────────────────────────────────
 
@@ -53,28 +55,6 @@ const expenseFiltersSchema = z.object({
 
 // ─── Helpers ─────────────────────────────────────────────
 
-function buildDateFilter(month?: number, year?: number) {
-  if (!month || !year) return undefined;
-  return {
-    gte: new Date(year, month - 1, 1),
-    lt: new Date(year, month, 1),
-  };
-}
-
-/**
- * Calcola la prossima data di ricorrenza a partire da una data base.
- * Es: monthly "01/01/2026" → "01/02/2026"
- */
-function getNextRecurringDate(
-  baseDate: Date,
-  frequency: "monthly" | "weekly" | "yearly"
-): Date {
-  const next = new Date(baseDate);
-  if (frequency === "monthly") next.setMonth(next.getMonth() + 1);
-  if (frequency === "weekly") next.setDate(next.getDate() + 7);
-  if (frequency === "yearly") next.setFullYear(next.getFullYear() + 1);
-  return next;
-}
 
 // ─── Router ──────────────────────────────────────────────
 
@@ -87,7 +67,7 @@ export const expenseRouter = createTRPCRouter({
 
       const where = {
         userId: ctx.session.user.id,
-        ...(buildDateFilter(month, year) && { date: buildDateFilter(month, year) }),
+        ...(month && year && { date: buildDateRange(month, year) }),
         ...(categoryId && { categoryId }),
         ...(search && {
           description: { contains: search, mode: "insensitive" as const },
@@ -233,7 +213,10 @@ export const expenseRouter = createTRPCRouter({
     }))
     .query(async ({ ctx, input }) => {
       const result = await ctx.db.expense.aggregate({
-        where: { userId: ctx.session.user.id, date: buildDateFilter(input.month, input.year) },
+        where: {
+          userId: ctx.session.user.id,
+          date: (input.month && input.year) ? buildDateRange(input.month, input.year) : undefined
+        },
         _sum: { amount: true },
         _count: true,
       });
@@ -251,71 +234,75 @@ export const expenseRouter = createTRPCRouter({
    * 2. Per ognuna, trova l'ultima istanza creata (o usa la data originale)
    * 3. Se la prossima data è ≤ oggi, crea la nuova istanza e aggiorna il ciclo
    */
-  processRecurring: protectedProcedure
-    .mutation(async ({ ctx }) => {
-      const userId = ctx.session.user.id;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+  processRecurring: protectedProcedure.mutation(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-      // Prende tutti i template ricorrenti attivi
-      const templates = await ctx.db.expense.findMany({
-        where: {
+    // 1. Prende tutti i template ricorrenti attivi
+    const templates = await ctx.db.expense.findMany({
+      where: {
+        userId,
+        isRecurring: true,
+        recurringParentId: null,
+        OR: [{ recurringEndDate: null }, { recurringEndDate: { gte: today } }],
+      },
+    });
+
+    if (templates.length === 0) return { created: 0 };
+
+    // 2. Ottimizzazione: Trova l'ultima spesa creata per OGNI template in un'unica query
+    const lastInstances = await ctx.db.expense.groupBy({
+      by: ["recurringParentId"],
+      where: {
+        userId,
+        recurringParentId: { in: templates.map((t) => t.id) },
+      },
+      _max: { date: true },
+    });
+
+    const lastInstanceMap = new Map(
+      lastInstances.map((li) => [li.recurringParentId, li._max.date])
+    );
+
+    const toCreate = [];
+
+    for (const template of templates) {
+      if (!template.recurringFrequency) continue;
+      const frequency = template.recurringFrequency as
+        | "monthly"
+        | "weekly"
+        | "yearly";
+
+      // Punto di partenza: ultima istanza o template stesso se mai generata
+      const lastDate = lastInstanceMap.get(template.id) ?? template.date;
+      let nextDate = getNextRecurringDate(lastDate, frequency);
+
+      // Crea tutte le istanze mancanti fino a oggi
+      while (nextDate <= today) {
+        if (template.recurringEndDate && nextDate > template.recurringEndDate)
+          break;
+
+        toCreate.push({
+          amount: template.amount,
+          description: template.description,
+          date: nextDate,
+          categoryId: template.categoryId,
           userId,
-          isRecurring: true,
-          recurringParentId: null, // solo i template, non le copie
-          // Non scaduti
-          OR: [
-            { recurringEndDate: null },
-            { recurringEndDate: { gte: today } },
-          ],
-        },
-      });
-
-      if (templates.length === 0) return { created: 0 };
-
-      const toCreate = [];
-
-      for (const template of templates) {
-        if (!template.recurringFrequency) continue;
-        const frequency = template.recurringFrequency as "monthly" | "weekly" | "yearly";
-
-        // Trova l'ultima istanza creata da questo template
-        const lastInstance = await ctx.db.expense.findFirst({
-          where: { userId, recurringParentId: template.id },
-          orderBy: { date: "desc" },
+          isRecurring: false,
+          recurringParentId: template.id,
         });
 
-        // Punto di partenza: ultima istanza o template stesso
-        let nextDate = getNextRecurringDate(
-          lastInstance?.date ?? template.date,
-          frequency
-        );
-
-        // Crea tutte le istanze mancanti fino a oggi
-        while (nextDate <= today) {
-          // Controlla che non superi la data di fine
-          if (template.recurringEndDate && nextDate > template.recurringEndDate) break;
-
-          toCreate.push({
-            amount: template.amount,
-            description: template.description,
-            date: nextDate,
-            categoryId: template.categoryId,
-            userId,
-            isRecurring: false,            // le copie non sono template
-            recurringParentId: template.id, // link al template originale
-          });
-
-          nextDate = getNextRecurringDate(nextDate, frequency);
-        }
+        nextDate = getNextRecurringDate(nextDate, frequency);
       }
+    }
 
-      if (toCreate.length > 0) {
-        await ctx.db.expense.createMany({ data: toCreate });
-      }
+    if (toCreate.length > 0) {
+      await ctx.db.expense.createMany({ data: toCreate });
+    }
 
-      return { created: toCreate.length };
-    }),
+    return { created: toCreate.length };
+  }),
 
   // Lista spese ricorrenti attive (per la gestione)
   getRecurring: protectedProcedure
@@ -353,11 +340,10 @@ export const expenseRouter = createTRPCRouter({
       const { month, year } = input;
       const userId = ctx.session.user.id;
 
-      // Inizio e fine mese richiesto
       const monthStart = new Date(year, month - 1, 1);
       const monthEnd = new Date(year, month, 1);
 
-      // Tutti i template attivi
+      // 1. Recupero template attivi
       const templates = await ctx.db.expense.findMany({
         where: {
           userId,
@@ -373,46 +359,55 @@ export const expenseRouter = createTRPCRouter({
 
       if (templates.length === 0) return [];
 
-      const upcoming: {
-        templateId: string;
-        description: string;
-        amount: number;
-        expectedDate: Date;
-        category: { id: string; name: string; icon: string | null; color: string | null };
-        frequency: string;
-        alreadyCreated: boolean;
-      }[] = [];
+      // 2. Ottimizzazione: Recupero ultime istanze e istanze già esistenti nel mese in un colpo solo
+      const [lastInstances, allExistingInMonth] = await Promise.all([
+        ctx.db.expense.groupBy({
+          by: ["recurringParentId"],
+          where: {
+            userId,
+            recurringParentId: { in: templates.map((t) => t.id) },
+          },
+          _max: { date: true },
+        }),
+        ctx.db.expense.findMany({
+          where: {
+            userId,
+            recurringParentId: { in: templates.map((t) => t.id) },
+            date: { gte: monthStart, lt: monthEnd },
+          },
+          select: { recurringParentId: true, date: true },
+        }),
+      ]);
+
+      const lastInstanceMap = new Map(
+        lastInstances.map((li) => [li.recurringParentId, li._max.date])
+      );
+      const existingDatesMap = new Map<string, Set<number>>();
+      allExistingInMonth.forEach((e) => {
+        if (!e.recurringParentId) return;
+        if (!existingDatesMap.has(e.recurringParentId)) {
+          existingDatesMap.set(e.recurringParentId, new Set());
+        }
+        existingDatesMap.get(e.recurringParentId)?.add(e.date.getTime());
+      });
+
+      const upcoming = [];
 
       for (const template of templates) {
         if (!template.recurringFrequency) continue;
-        const freq = template.recurringFrequency as "monthly" | "weekly" | "yearly";
+        const freq = template.recurringFrequency as
+          | "monthly"
+          | "weekly"
+          | "yearly";
 
-        // Ultima istanza creata
-        const lastInstance = await ctx.db.expense.findFirst({
-          where: { userId, recurringParentId: template.id },
-          orderBy: { date: "desc" },
-        });
+        const lastDate = lastInstanceMap.get(template.id) ?? template.date;
+        let nextDate = getNextRecurringDate(lastDate, freq);
+        const createdDates = existingDatesMap.get(template.id) ?? new Set();
 
-        const baseDate = lastInstance?.date ?? template.date;
-        let nextDate = getNextRecurringDate(baseDate, freq);
-
-        // Trova le istanze già create nel mese
-        const alreadyCreated = await ctx.db.expense.findMany({
-          where: {
-            userId,
-            recurringParentId: template.id,
-            date: { gte: monthStart, lt: monthEnd },
-          },
-          select: { date: true },
-        });
-        const createdDates = new Set(alreadyCreated.map(e => e.date.getTime()));
-
-        // Avanza e aggiungi all'upcoming finché la data target non supera la fine del mese
         while (nextDate < monthEnd) {
-          // Termina in anticipo se la ricorrenza è scaduta
-          if (template.recurringEndDate && nextDate > template.recurringEndDate) break;
+          if (template.recurringEndDate && nextDate > template.recurringEndDate)
+            break;
 
-          // La prossima occorrenza cade nel mese richiesto?
           if (nextDate >= monthStart) {
             upcoming.push({
               templateId: template.id,
