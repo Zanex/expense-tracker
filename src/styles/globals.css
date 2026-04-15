@@ -88,37 +88,37 @@
 }
 
 .dark {
-  --background: oklch(0.18 0 0);
+  --background: oklch(0.13 0.028 261);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.23 0 0);
+  --card: oklch(0.15 0.03 261);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.23 0 0);
+  --popover: oklch(0.15 0.03 261);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.18 0 0);
-  --secondary: oklch(0.28 0 0);
+  --primary: oklch(0.75 0.15 250);
+  --primary-foreground: oklch(0.13 0.028 261);
+  --secondary: oklch(0.2 0.04 261);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.28 0 0);
-  --muted-foreground: oklch(0.7 0 0);
-  --accent: oklch(0.28 0 0);
+  --muted: oklch(0.2 0.04 261);
+  --muted-foreground: oklch(0.7 0.04 261);
+  --accent: oklch(0.2 0.04 261);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.65 0.2 25);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.6 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.6 0 0);
-  --chart-3: oklch(0.5 0 0);
-  --chart-4: oklch(0.4 0 0);
-  --chart-5: oklch(0.3 0 0);
-  --sidebar: oklch(0.2 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.75 0.15 250);
+  --chart-1: oklch(0.87 0.15 250);
+  --chart-2: oklch(0.6 0.15 250);
+  --chart-3: oklch(0.5 0.15 250);
+  --chart-4: oklch(0.4 0.15 250);
+  --chart-5: oklch(0.3 0.15 250);
+  --sidebar: oklch(0.12 0.02 261);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.5 0.2 265);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.28 0 0);
+  --sidebar-primary: oklch(0.75 0.15 250);
+  --sidebar-primary-foreground: oklch(0.13 0.028 261);
+  --sidebar-accent: oklch(0.2 0.04 261);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.6 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.75 0.15 250);
 }
 
 @layer base {
@@ -126,7 +126,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-background to-background bg-fixed;
   }
   html {
     @apply font-sans;

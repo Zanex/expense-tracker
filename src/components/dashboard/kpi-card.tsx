@@ -29,10 +29,14 @@ export function KpiCard({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+        <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
           {title}
         </CardTitle>
-        {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+        {Icon && (
+          <div className="rounded-full bg-primary/10 p-2 text-primary ring-1 ring-primary/20 shadow-[0_0_15px_rgba(var(--primary),0.2)]">
+            <Icon className="h-4 w-4" />
+          </div>
+        )}
       </CardHeader>
       <CardContent className="flex flex-col gap-1">
         {isLoading ? (
@@ -42,7 +46,9 @@ export function KpiCard({
           </>
         ) : (
           <>
-            <div className="text-2xl font-bold tabular-nums">{value}</div>
+            <div className="text-2xl font-bold tabular-nums bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
+              {value}
+            </div>
             {description && (
               <p className="text-xs text-muted-foreground">{description}</p>
             )}
