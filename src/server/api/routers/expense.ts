@@ -21,6 +21,7 @@ const expenseCreateSchema = z.object({
   isRecurring: z.boolean().default(false),
   recurringFrequency: z.enum(["monthly", "weekly", "yearly"]).optional(),
   recurringEndDate: z.date().optional(),
+  tripId: z.string().cuid("ID viaggio non valido").optional().nullable(),
 });
 
 const expenseUpdateSchema = z.object({
@@ -40,6 +41,7 @@ const expenseUpdateSchema = z.object({
   isRecurring: z.boolean().optional(),
   recurringFrequency: z.enum(["monthly", "weekly", "yearly"]).optional().nullable(),
   recurringEndDate: z.date().optional().nullable(),
+  tripId: z.string().cuid("ID viaggio non valido").optional().nullable(),
 });
 
 const expenseFiltersSchema = z.object({
@@ -51,6 +53,7 @@ const expenseFiltersSchema = z.object({
   amountMax: z.number().positive().optional(),
   page: z.number().min(1).default(1),
   limit: z.number().min(1).max(100).default(20),
+  tripId: z.string().cuid().optional(),
 });
 
 // ─── Helpers ─────────────────────────────────────────────
@@ -62,7 +65,7 @@ export const expenseRouter = createTRPCRouter({
   getAll: protectedProcedure
     .input(expenseFiltersSchema)
     .query(async ({ ctx, input }) => {
-      const { month, year, categoryId, search, amountMin, amountMax, page, limit } = input;
+      const { month, year, categoryId, search, amountMin, amountMax, page, limit, tripId } = input;
       const skip = (page - 1) * limit;
 
       const where = {
@@ -78,6 +81,7 @@ export const expenseRouter = createTRPCRouter({
             ...(amountMax && { lte: amountMax }),
           },
         }),
+        ...(tripId && { tripId }),
       };
 
       const [expenses, totalCount] = await Promise.all([
@@ -129,6 +133,16 @@ export const expenseRouter = createTRPCRouter({
           code: "BAD_REQUEST",
           message: "Specifica la frequenza di ricorrenza",
         });
+      }
+
+      if (input.tripId) {
+        const trip = await ctx.db.trip.findUnique({
+          where: { id: input.tripId, userId: ctx.session.user.id },
+          select: { id: true },
+        });
+        if (!trip) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Viaggio non trovato" });
+        }
       }
 
       return ctx.db.expense.create({
