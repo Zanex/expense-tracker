@@ -57,6 +57,7 @@ model User {
   sessions      Session[]
   expenses      Expense[]
   categories    Category[]
+  trips         Trip[]
   createdAt     DateTime   @default(now())
 }
 
@@ -90,6 +91,32 @@ model Expense {
   recurringEndDate   DateTime?
   recurringParentId  String?   // id della spesa "template" originale
 
+  // ─── Viaggi ────────────────────────────────────────
+  tripId  String?
+  trip    Trip?    @relation(fields: [tripId], references: [id], onDelete: SetNull)
+
   @@index([userId, date])           // performance dashboard query
   @@index([userId, isRecurring])    // performance processRecurring
+  @@index([userId, tripId])
+}
+
+model Trip {
+  id          String    @id @default(cuid())
+  name        String
+  destination String?
+  startDate   DateTime
+  endDate     DateTime?
+  budget      Decimal?  @db.Decimal(10, 2)
+  coverColor  String?   // colore hex es. "#6366f1"
+  coverEmoji  String?   // emoji es. "🏖️"
+  notes       String?   @db.Text
+
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses    Expense[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, startDate])
 }

@@ -16,7 +16,6 @@ export const mockSession = {
 };
 
 // ─── Mock Prisma ──────────────────────────────────────────
-// Ogni metodo è un vi.fn() — nei test puoi fare .mockResolvedValue(...)
 
 export function createMockDb() {
   return {
@@ -40,6 +39,16 @@ export function createMockDb() {
       update: vi.fn(),
       delete: vi.fn(),
       createMany: vi.fn(),
+    },
+    trip: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      aggregate: vi.fn(),
+      count: vi.fn(),
     },
     $transaction: vi.fn(),
   };
