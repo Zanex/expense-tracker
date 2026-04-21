@@ -3,11 +3,7 @@
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import { toast } from "sonner";
-import {
-  formatCurrency,
-  formatDate,
-  toNumber,
-} from "~/lib/utils";
+import { formatCurrency, formatDate, toNumber } from "~/lib/utils";
 import {
   ArrowLeft,
   MapPin,
@@ -48,8 +44,12 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { TripForm } from "~/components/trips/trip-form";
+import { TripKpiGrid } from "~/components/trips/trip-kpi-grid";
+import { TripCategoryChart } from "~/components/trips/trip-category-chart";
+import { TripSpendingTimeline } from "~/components/trips/trip-spending-timeline";
 import { ExpenseForm } from "~/components/expenses/expense-form";
 import { Pagination } from "~/components/expenses/pagination";
+import { ChartErrorBoundary } from "~/components/ui/chart-error-boundary";
 import { cn } from "~/lib/utils";
 
 // ─── Status config ────────────────────────────────────────
@@ -60,38 +60,13 @@ const STATUS_CONFIG = {
   completed: { label: "Concluso",    className: "bg-muted text-muted-foreground" },
 } as const;
 
-// ─── KPI Card ─────────────────────────────────────────────
-
-function KpiCard({
-  label,
-  value,
-  sub,
-  color,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  color?: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1 rounded-xl border bg-card px-4 py-3">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      <span
-        className="text-xl font-bold tabular-nums"
-        style={color ? { color } : undefined}
-      >
-        {value}
-      </span>
-      {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
-    </div>
-  );
-}
-
-// ─── Main Component ───────────────────────────────────────
+// ─── Props ────────────────────────────────────────────────
 
 interface TripDetailProps {
   tripId: string;
 }
+
+// ─── Component ───────────────────────────────────────────
 
 export function TripDetail({ tripId }: TripDetailProps) {
   const [editTripOpen, setEditTripOpen] = useState(false);
@@ -101,8 +76,6 @@ export function TripDetail({ tripId }: TripDetailProps) {
   const [currentPage, setCurrentPage] = useState(1);
 
   const utils = api.useUtils();
-
-  // ─── Queries ───────────────────────────────────────────
 
   const { data: trip, isLoading: tripLoading } = api.trip.getById.useQuery({ id: tripId });
 
@@ -117,13 +90,13 @@ export function TripDetail({ tripId }: TripDetailProps) {
     { enabled: !!editingExpenseId }
   );
 
-  // ─── Mutations ─────────────────────────────────────────
-
   const deleteExpenseMutation = api.expense.delete.useMutation({
     onSuccess: async () => {
       await Promise.all([
         utils.trip.getExpenses.invalidate({ id: tripId }),
         utils.trip.getById.invalidate({ id: tripId }),
+        utils.trip.getSummary.invalidate({ id: tripId }),
+        utils.trip.getSpendingTimeline.invalidate({ id: tripId }),
       ]);
       toast.success("Spesa eliminata");
       setDeletingExpenseId(null);
@@ -134,17 +107,30 @@ export function TripDetail({ tripId }: TripDetailProps) {
     },
   });
 
-  // ─── Loading ───────────────────────────────────────────
+  function handleExpenseSuccess() {
+    setAddExpenseOpen(false);
+    setEditingExpenseId(null);
+    void utils.trip.getExpenses.invalidate({ id: tripId });
+    void utils.trip.getById.invalidate({ id: tripId });
+    void utils.trip.getSummary.invalidate({ id: tripId });
+    void utils.trip.getSpendingTimeline.invalidate({ id: tripId });
+  }
+
+  // ─── Loading skeleton ──────────────────────────────────
 
   if (tripLoading || !trip) {
     return (
       <div className="flex flex-col gap-6">
-        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-5 w-32" />
         <Skeleton className="h-32 w-full rounded-xl" />
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-20 rounded-xl" />
           ))}
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <Skeleton className="h-72 rounded-xl" />
+          <Skeleton className="h-72 rounded-xl" />
         </div>
         <Skeleton className="h-64 w-full rounded-xl" />
       </div>
@@ -156,7 +142,7 @@ export function TripDetail({ tripId }: TripDetailProps) {
   const statusCfg = STATUS_CONFIG[trip.status];
   const expenses = expensesData?.expenses ?? [];
   const pagination = expensesData?.pagination;
-  const overBudget = trip.budget != null && trip.totalSpent > (trip.budget ?? 0);
+  const budget = trip.budget != null ? toNumber(trip.budget) : null;
 
   return (
     <>
@@ -165,16 +151,16 @@ export function TripDetail({ tripId }: TripDetailProps) {
         {/* Back link */}
         <Link
           href="/trips"
-          className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Tutti i viaggi
         </Link>
 
-        {/* Header viaggio */}
+        {/* ── Header ──────────────────────────────── */}
         <div
           className="flex flex-col gap-3 rounded-xl p-5 sm:flex-row sm:items-start sm:justify-between"
-          style={{ backgroundColor: `${color}14`, border: `1.5px solid ${color}30` }}
+          style={{ backgroundColor: `${color}12`, border: `1.5px solid ${color}28` }}
         >
           <div className="flex items-start gap-4">
             <span
@@ -185,7 +171,7 @@ export function TripDetail({ tripId }: TripDetailProps) {
             </span>
             <div className="flex flex-col gap-1.5">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-bold" style={{ color }}>
+                <h1 className="text-2xl font-bold leading-tight" style={{ color }}>
                   {trip.name}
                 </h1>
                 <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", statusCfg.className)}>
@@ -198,23 +184,27 @@ export function TripDetail({ tripId }: TripDetailProps) {
                   {trip.destination}
                 </span>
               )}
-              <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <span className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
                 <Calendar className="h-3.5 w-3.5" />
                 {formatDate(trip.startDate)}
                 {trip.endDate && <> — {formatDate(trip.endDate)}</>}
                 {trip.duration && (
-                  <span className="ml-1 rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
+                  <span
+                    className="rounded-full px-2 py-0.5 text-xs"
+                    style={{ backgroundColor: `${color}18`, color }}
+                  >
                     {trip.duration} {trip.duration === 1 ? "giorno" : "giorni"}
                   </span>
                 )}
               </span>
               {trip.notes && (
-                <p className="mt-1 max-w-md text-sm text-muted-foreground">{trip.notes}</p>
+                <p className="mt-0.5 max-w-md text-sm text-muted-foreground leading-relaxed">
+                  {trip.notes}
+                </p>
               )}
             </div>
           </div>
 
-          {/* Azioni header */}
           <div className="flex shrink-0 gap-2 self-start">
             <Button variant="outline" size="sm" onClick={() => setEditTripOpen(true)}>
               <Pencil className="mr-1.5 h-3.5 w-3.5" />
@@ -227,82 +217,35 @@ export function TripDetail({ tripId }: TripDetailProps) {
           </div>
         </div>
 
-        {/* KPI Grid */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <KpiCard
-            label="Totale speso"
-            value={formatCurrency(trip.totalSpent)}
-            sub={`${trip.expenseCount} ${trip.expenseCount === 1 ? "transazione" : "transazioni"}`}
-            color={color}
-          />
-          <KpiCard
-            label="Budget"
-            value={trip.budget != null ? formatCurrency(trip.budget) : "—"}
-            sub={trip.budget != null ? "budget totale" : "non impostato"}
-          />
-          <KpiCard
-            label="Rimanente"
-            value={
-              trip.budgetRemaining != null
-                ? formatCurrency(Math.abs(trip.budgetRemaining))
-                : "—"
-            }
-            sub={
-              trip.budgetRemaining == null
-                ? "nessun budget"
-                : overBudget
-                ? "over budget ⚠️"
-                : "ancora disponibili"
-            }
-            color={
-              trip.budgetRemaining == null
-                ? undefined
-                : overBudget
-                ? "#ef4444"
-                : "#22c55e"
-            }
-          />
-          <KpiCard
-            label="Utilizzo budget"
-            value={trip.budgetPercentage != null ? `${trip.budgetPercentage}%` : "—"}
-            sub={
-              trip.budgetPercentage != null
-                ? overBudget
-                  ? "sforato"
-                  : "del budget usato"
-                : "nessun budget"
-            }
-            color={
-              trip.budgetPercentage == null
-                ? undefined
-                : overBudget
-                ? "#ef4444"
-                : trip.budgetPercentage >= 80
-                ? "#f97316"
-                : "#22c55e"
-            }
-          />
+        {/* ── KPI + budget bar ─────────────────────── */}
+        <TripKpiGrid tripId={tripId} coverColor={color} />
+
+        {/* ── Grafici ──────────────────────────────── */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <ChartErrorBoundary title="Spese per categoria">
+            <TripCategoryChart tripId={tripId} />
+          </ChartErrorBoundary>
+          <ChartErrorBoundary title="Spese nel tempo">
+            <TripSpendingTimeline
+              tripId={tripId}
+              duration={trip.duration}
+              coverColor={color}
+              budget={budget}
+            />
+          </ChartErrorBoundary>
         </div>
 
-        {/* Budget bar — solo se budget impostato */}
-        {trip.budget != null && (
-          <div className="flex flex-col gap-1.5">
-            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{
-                  width: `${Math.min(trip.budgetPercentage ?? 0, 100)}%`,
-                  backgroundColor: overBudget ? "#ef4444" : color,
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Lista spese del viaggio */}
+        {/* ── Lista spese ───────────────────────────── */}
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold">Spese del viaggio</h2>
+            <h2 className="font-semibold">
+              Spese del viaggio
+              {pagination && (
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  ({pagination.totalCount})
+                </span>
+              )}
+            </h2>
             <Button size="sm" variant="outline" onClick={() => setAddExpenseOpen(true)}>
               <Plus className="mr-1.5 h-3.5 w-3.5" />
               Aggiungi
@@ -310,7 +253,7 @@ export function TripDetail({ tripId }: TripDetailProps) {
           </div>
 
           {expensesLoading ? (
-            <div className="rounded-xl border bg-card">
+            <div className="rounded-xl border bg-card overflow-hidden">
               {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-4 border-b px-4 py-4 last:border-0">
                   <Skeleton className="h-4 w-20" />
@@ -329,7 +272,8 @@ export function TripDetail({ tripId }: TripDetailProps) {
             />
           ) : (
             <>
-              <div className="rounded-xl border bg-card overflow-hidden">
+              {/* Desktop */}
+              <div className="hidden rounded-xl border bg-card overflow-hidden md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -357,10 +301,7 @@ export function TripDetail({ tripId }: TripDetailProps) {
                         <TableCell>
                           <Badge
                             variant="secondary"
-                            style={{
-                              backgroundColor: expense.category.color ?? "#6366f1",
-                              color: "#fff",
-                            }}
+                            style={{ backgroundColor: expense.category.color ?? "#6366f1", color: "#fff" }}
                           >
                             {expense.category.icon ?? "📁"} {expense.category.name}
                           </Badge>
@@ -373,10 +314,7 @@ export function TripDetail({ tripId }: TripDetailProps) {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => {
-                                setEditingExpenseId(expense.id);
-                                setAddExpenseOpen(true);
-                              }}
+                              onClick={() => { setEditingExpenseId(expense.id); setAddExpenseOpen(true); }}
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
@@ -394,6 +332,48 @@ export function TripDetail({ tripId }: TripDetailProps) {
                     ))}
                   </TableBody>
                 </Table>
+              </div>
+
+              {/* Mobile */}
+              <div className="flex flex-col divide-y rounded-xl border bg-card overflow-hidden md:hidden">
+                {expenses.map((expense) => (
+                  <div key={expense.id} className="flex items-start justify-between p-4">
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-medium">{expense.description}</p>
+                        {expense.recurringParentId && (
+                          <RefreshCw className="h-3 w-3 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant="secondary"
+                          style={{ backgroundColor: expense.category.color ?? "#6366f1", color: "#fff" }}
+                        >
+                          {expense.category.icon ?? "📁"} {expense.category.name}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDate(expense.date)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="font-semibold tabular-nums">
+                        {formatCurrency(toNumber(expense.amount))}
+                      </span>
+                      <div className="flex gap-0.5">
+                        <Button variant="ghost" size="icon" className="h-8 w-8"
+                          onClick={() => { setEditingExpenseId(expense.id); setAddExpenseOpen(true); }}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => setDeletingExpenseId(expense.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
 
               {pagination && (
@@ -420,67 +400,38 @@ export function TripDetail({ tripId }: TripDetailProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog aggiungi / modifica spesa */}
-      <Dialog
-        open={addExpenseOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setAddExpenseOpen(false);
-            setEditingExpenseId(null);
-          }
-        }}
-      >
+      {/* Dialog spesa */}
+      <Dialog open={addExpenseOpen} onOpenChange={(open) => { if (!open) { setAddExpenseOpen(false); setEditingExpenseId(null); } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {editingExpenseId ? "Modifica spesa" : "Aggiungi spesa"}
-            </DialogTitle>
+            <DialogTitle>{editingExpenseId ? "Modifica spesa" : "Aggiungi spesa"}</DialogTitle>
           </DialogHeader>
           {editingExpenseId && !editingExpense ? (
             <div className="flex flex-col gap-4 py-4">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
+              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
             </div>
           ) : (
             <ExpenseForm
-              expense={
-                editingExpense
-                  ? editingExpense
-                  : undefined
-              }
+              expense={editingExpense ?? undefined}
               defaultTripId={tripId}
-              onSuccess={() => {
-                setAddExpenseOpen(false);
-                setEditingExpenseId(null);
-                void utils.trip.getExpenses.invalidate({ id: tripId });
-                void utils.trip.getById.invalidate({ id: tripId });
-              }}
+              onSuccess={handleExpenseSuccess}
             />
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Alert dialog elimina spesa */}
-      <AlertDialog
-        open={!!deletingExpenseId}
-        onOpenChange={(open) => !open && setDeletingExpenseId(null)}
-      >
+      {/* Alert elimina spesa */}
+      <AlertDialog open={!!deletingExpenseId} onOpenChange={(open) => !open && setDeletingExpenseId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminare la spesa?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Questa azione non è reversibile.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Questa azione non è reversibile.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annulla</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() =>
-                deletingExpenseId &&
-                deleteExpenseMutation.mutate({ id: deletingExpenseId })
-              }
+              onClick={() => deletingExpenseId && deleteExpenseMutation.mutate({ id: deletingExpenseId })}
               disabled={deleteExpenseMutation.isPending}
             >
               {deleteExpenseMutation.isPending ? "Eliminazione..." : "Elimina"}

@@ -405,4 +405,67 @@ export const tripRouter = createTRPCRouter({
         },
       };
     }),
+
+// getSpendingTimeline: raggruppa le spese del viaggio per giorno o settimana.
+// Usata dal grafico a barre nella dashboard viaggio.
+// ─────────────────────────────────────────────────────────────────────────────
+  getSpendingTimeline: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().cuid(),
+        // "daily" per viaggi brevi (< 14gg), "weekly" per lunghi
+        granularity: z.enum(["daily", "weekly"]).default("daily"),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { id, granularity } = input;
+      const userId = ctx.session.user.id;
+
+      // Verifica ownership
+      const trip = await ctx.db.trip.findUnique({
+        where: { id, userId },
+        select: { id: true, startDate: true, endDate: true },
+      });
+
+      if (!trip) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Viaggio non trovato" });
+      }
+
+      // Tutte le spese del viaggio, ordinate per data
+      const expenses = await ctx.db.expense.findMany({
+        where: { userId, tripId: id },
+        select: { date: true, amount: true },
+        orderBy: { date: "asc" },
+      });
+
+      if (expenses.length === 0) return [];
+
+      // Raggruppa per giorno o settimana
+      const buckets = new Map<string, number>();
+
+      for (const expense of expenses) {
+        const d = new Date(expense.date);
+        let key: string;
+
+        if (granularity === "daily") {
+          // Chiave = "gg/mm"
+          key = d.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
+        } else {
+          // Chiave = inizio settimana "gg/mm"
+          const dayOfWeek = d.getDay(); // 0 = dom, 1 = lun, ...
+          const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
+          const monday = new Date(d);
+          monday.setDate(d.getDate() + diffToMonday);
+          key = monday.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
+        }
+
+        buckets.set(key, (buckets.get(key) ?? 0) + expense.amount.toNumber());
+      }
+
+      return Array.from(buckets.entries()).map(([label, total]) => ({
+        label,
+        total: Math.round(total * 100) / 100,
+      }));
+    }),
+
 });
