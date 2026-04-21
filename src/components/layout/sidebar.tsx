@@ -3,30 +3,32 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "~/lib/utils";
-import { LayoutDashboard, Receipt, Tag, BarChart2, X } from "lucide-react";
+import { LayoutDashboard, Receipt, Tag, BarChart2, Plane, X } from "lucide-react";
 
 // ─── Nav items ────────────────────────────────────────────
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/expenses", label: "Spese", icon: Receipt },
-  { href: "/categories", label: "Categorie", icon: Tag },
-  { href: "/reports", label: "Report", icon: BarChart2 },
+  { href: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard },
+  { href: "/expenses",   label: "Spese",      icon: Receipt },
+  { href: "/trips",      label: "Viaggi",     icon: Plane },
+  { href: "/categories", label: "Categorie",  icon: Tag },
+  { href: "/reports",    label: "Report",     icon: BarChart2 },
 ];
 
-// ─── Nav content (riusabile in desktop e mobile) ──────────
+// ─── Nav content ─────────────────────────────────────────
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Preserviamo mese e anno nei link di navigazione
   const month = searchParams.get("month");
   const year = searchParams.get("year");
 
   function getHrefWithParams(baseHref: string) {
-    if (!month && !year) return baseHref;
+    // Preserva mese/anno solo per le pagine che lo usano
+    const usesMonthFilter = ["/dashboard", "/expenses", "/reports"].includes(baseHref);
+    if (!usesMonthFilter || (!month && !year)) return baseHref;
     const params = new URLSearchParams();
     if (month) params.set("month", month);
     if (year) params.set("year", year);
@@ -41,6 +43,9 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
       <nav className="flex flex-1 flex-col gap-1">
         {navItems.map(({ href, label, icon: Icon }) => {
           const fullHref = getHrefWithParams(href);
+          // Gestisce match anche per sotto-route (es. /trips/[id])
+          const isActive = pathname === href || pathname.startsWith(`${href}/`);
+
           return (
             <Link
               key={href}
@@ -49,7 +54,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
               onMouseEnter={() => router.prefetch(href)}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                pathname === href
+                isActive
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               )}
@@ -76,21 +81,19 @@ interface SidebarProps {
 export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   return (
     <>
-      {/* Desktop sidebar — visibile da md in su */}
-      <aside className="hidden h-screen w-60 flex-col border-r border-border/40 bg-background/60 backdrop-blur-md px-3 py-4 md:flex">
+      {/* Desktop sidebar */}
+      <aside className="hidden h-screen w-60 flex-col border-r bg-background px-3 py-4 md:flex">
         <NavContent />
       </aside>
 
       {/* Mobile drawer */}
       {mobileOpen && (
         <>
-          {/* Overlay */}
           <div
             className="fixed inset-0 z-40 bg-black/40 md:hidden"
             onClick={onMobileClose}
           />
-          {/* Pannello */}
-          <aside className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-border/40 bg-background/80 backdrop-blur-xl px-3 py-4 shadow-2xl md:hidden">
+          <aside className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r bg-background px-3 py-4 shadow-xl md:hidden">
             <button
               onClick={onMobileClose}
               className="absolute right-3 top-3 rounded-lg p-1.5 text-muted-foreground hover:bg-accent"

@@ -44,6 +44,7 @@ const baseSchema = z.object({
   isRecurring: z.boolean(),
   recurringFrequency: z.enum(["monthly", "weekly", "yearly"]).optional(),
   recurringEndDate: z.string().optional(),
+  tripId: z.string().cuid().optional().nullable(),
 });
 
 const formSchema = baseSchema.refine(
@@ -68,7 +69,9 @@ interface ExpenseFormProps {
     isRecurring?: boolean;
     recurringFrequency?: string | null;
     recurringEndDate?: Date | null;
+    tripId?: string | null;
   };
+  defaultTripId?: string | null;
   onSuccess: () => void;
 }
 
@@ -82,7 +85,7 @@ const FREQUENCY_OPTIONS = [
 
 // ─── Component ───────────────────────────────────────────
 
-export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
+export function ExpenseForm({ expense, defaultTripId, onSuccess }: ExpenseFormProps) {
   const isEditing = !!expense;
   const utils = api.useUtils();
   const { data: categories } = api.category.getAll.useQuery();
@@ -100,6 +103,7 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
       recurringEndDate: expense?.recurringEndDate
         ? formatDateInput(expense.recurringEndDate)
         : "",
+      tripId: expense?.tripId ?? defaultTripId ?? null,
     },
   });
 
@@ -148,6 +152,7 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
         values.isRecurring && values.recurringEndDate
           ? new Date(values.recurringEndDate)
           : undefined,
+      tripId: values.tripId ?? undefined,
     };
 
     if (isEditing) {
@@ -238,6 +243,44 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="tripId"
+          render={({ field }) => {
+            const { data: trips } = api.trip.getAll.useQuery({ status: "all" });
+            return (
+              <FormItem>
+                <FormLabel>
+                  Viaggio{" "}
+                  <span className="text-xs font-normal text-muted-foreground">(opzionale)</span>
+                </FormLabel>
+                <Select
+                  onValueChange={(v) => field.onChange(v === "none" ? null : v)}
+                  value={field.value ?? "none"}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Nessun viaggio" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="none">Nessun viaggio</SelectItem>
+                    {trips?.map((trip) => (
+                      <SelectItem key={trip.id} value={trip.id}>
+                        <span className="flex items-center gap-2">
+                          <span>{trip.coverEmoji ?? "✈️"}</span>
+                          <span>{trip.name}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            );
+          }}
+        />
 
         {/* ─── Toggle Ricorrenza ─────────────────────── */}
         <FormField
