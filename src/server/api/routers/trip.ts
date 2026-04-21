@@ -345,6 +345,64 @@ export const tripRouter = createTRPCRouter({
     }),
 
   /**
+   * duplicate: clona un viaggio (metadata only, senza spese).
+   * Utile per viaggi ricorrenti (vacanza annuale, trasferta mensile).
+   */
+  duplicate: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().cuid(),
+        // Opzionali — se non passati usa i valori originali
+        name: z.string().min(1).max(100).optional(),
+        startDate: z.date().optional(),
+        endDate: z.date().optional().nullable(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const original = await ctx.db.trip.findUnique({
+        where: { id: input.id, userId },
+      });
+
+      if (!original) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Viaggio non trovato" });
+      }
+
+      // Nome di default: "Copia di <nome originale>"
+      const newName = input.name ?? `Copia di ${original.name}`;
+
+      // Date: se passate, usa quelle. Altrimenti sposta di +1 anno.
+      let newStart: Date;
+      let newEnd: Date | null;
+
+      if (input.startDate) {
+        newStart = input.startDate;
+        newEnd = input.endDate !== undefined ? input.endDate : null;
+      } else {
+        newStart = new Date(original.startDate);
+        newStart.setFullYear(newStart.getFullYear() + 1);
+        newEnd = original.endDate
+          ? new Date(new Date(original.endDate).setFullYear(original.endDate.getFullYear() + 1))
+          : null;
+      }
+
+      return ctx.db.trip.create({
+        data: {
+          name: newName,
+          destination: original.destination,
+          startDate: newStart,
+          endDate: newEnd,
+          budget: original.budget,
+          coverColor: original.coverColor,
+          coverEmoji: original.coverEmoji,
+          notes: original.notes,
+          userId,
+        },
+      });
+    }),
+
+  /**
    * getExpenses — spese di un viaggio specifico, con paginazione.
    * Riusa la logica di expense.getAll ma filtrata per tripId.
    */
@@ -406,9 +464,10 @@ export const tripRouter = createTRPCRouter({
       };
     }),
 
-// getSpendingTimeline: raggruppa le spese del viaggio per giorno o settimana.
-// Usata dal grafico a barre nella dashboard viaggio.
-// ─────────────────────────────────────────────────────────────────────────────
+  /**
+   * getSpendingTimeline: raggruppa le spese del viaggio per giorno o settimana.
+   * Usata dal grafico a barre nella dashboard viaggio.
+   */
   getSpendingTimeline: protectedProcedure
     .input(
       z.object({

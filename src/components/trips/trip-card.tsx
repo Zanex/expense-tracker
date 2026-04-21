@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
+import { TripExportButton, TripDuplicateButton } from "~/components/trips/trip-actions";
 import { cn } from "~/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────
@@ -119,6 +120,22 @@ export function TripCard({ trip, onEdit }: TripCardProps) {
           </span>
 
           <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+            <TripExportButton
+              tripId={trip.id}
+              tripName={trip.name}
+              variant="ghost"
+              size="sm"
+              showLabel={false}
+            />
+            <TripDuplicateButton
+              tripId={trip.id}
+              tripName={trip.name}
+              originalStartDate={trip.startDate}
+              originalEndDate={trip.endDate ?? null}
+              variant="ghost"
+              size="sm"
+              showLabel={false}
+            />
             <Button
               variant="ghost"
               size="icon"

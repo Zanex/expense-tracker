@@ -44,6 +44,7 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { TripForm } from "~/components/trips/trip-form";
+import { TripExportButton, TripDuplicateButton } from "~/components/trips/trip-actions";
 import { TripKpiGrid } from "~/components/trips/trip-kpi-grid";
 import { TripCategoryChart } from "~/components/trips/trip-category-chart";
 import { TripSpendingTimeline } from "~/components/trips/trip-spending-timeline";
@@ -205,7 +206,14 @@ export function TripDetail({ tripId }: TripDetailProps) {
             </div>
           </div>
 
-          <div className="flex shrink-0 gap-2 self-start">
+          <div className="flex shrink-0 flex-wrap gap-2 self-start">
+            <TripExportButton tripId={tripId} tripName={trip.name} />
+            <TripDuplicateButton
+              tripId={tripId}
+              tripName={trip.name}
+              originalStartDate={trip.startDate}
+              originalEndDate={trip.endDate ?? null}
+            />
             <Button variant="outline" size="sm" onClick={() => setEditTripOpen(true)}>
               <Pencil className="mr-1.5 h-3.5 w-3.5" />
               Modifica
