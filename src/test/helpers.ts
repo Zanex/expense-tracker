@@ -50,6 +50,19 @@ export function createMockDb() {
       aggregate: vi.fn(),
       count: vi.fn(),
     },
+    investment: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
+    investmentTransaction: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      delete: vi.fn(),
+    },
     $transaction: vi.fn(),
   };
 }
