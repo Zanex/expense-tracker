@@ -383,6 +383,119 @@ export const investmentRouter = createTRPCRouter({
       });
     }),
 
+  // ─── importBatch ─────────────────────────────────────────────────────────────
+  /**
+   * Importa transazioni in batch.
+   * Per ogni transazione:
+   *   1. Cerca una posizione esistente per (name+platform) o (isin+platform)
+   *   2. Se non esiste, la crea
+   *   3. Crea la transazione collegata
+   * Tutto in una singola $transaction Prisma per atomicità.
+   */
+  importBatch: protectedProcedure
+    .input(
+      z.object({
+        transactions: z
+          .array(
+            z.object({
+              // Identificazione posizione
+              name: z.string().min(1).max(100),
+              ticker: z.string().max(20).optional().nullable(),
+              isin: z.string().max(20).optional().nullable(),
+              platform: z.string().min(1).max(100),
+              investmentType: z.enum(["etf", "stock", "crypto", "fund", "bond", "gold", "cash"]),
+              // Transazione
+              txType: z.enum(["buy", "sell", "dividend", "fee"]),
+              quantity: z.number().positive(),
+              pricePerUnit: z.number().positive(),
+              fees: z.number().min(0).default(0),
+              date: z.date(),
+              notes: z.string().max(500).optional().nullable(),
+            })
+          )
+          .min(1)
+          .max(1000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+ 
+      // Raggruppa per (name, platform) per fare upsert efficiente
+      const investmentKey = (name: string, platform: string) =>
+        `${name.toLowerCase().trim()}||${platform.toLowerCase().trim()}`;
+ 
+      // Cache locale: chiave → id investimento (evita query duplicate)
+      const investmentCache = new Map<string, string>();
+ 
+      // Pre-carica le posizioni esistenti dell'utente
+      const existing = await ctx.db.investment.findMany({
+        where: { userId },
+        select: { id: true, name: true, platform: true, isin: true },
+      });
+ 
+      for (const inv of existing) {
+        investmentCache.set(investmentKey(inv.name, inv.platform), inv.id);
+        // Anche per ISIN se disponibile
+        if (inv.isin) {
+          investmentCache.set(`isin||${inv.isin}||${inv.platform.toLowerCase()}`, inv.id);
+        }
+      }
+ 
+      let created = 0;
+      let createdPositions = 0;
+ 
+      await ctx.db.$transaction(async (tx) => {
+        for (const item of input.transactions) {
+          // 1. Trova o crea la posizione
+          const nameKey = investmentKey(item.name, item.platform);
+          const isinKey = item.isin
+            ? `isin||${item.isin}||${item.platform.toLowerCase()}`
+            : null;
+ 
+          let investmentId =
+            investmentCache.get(nameKey) ??
+            (isinKey ? investmentCache.get(isinKey) : undefined);
+ 
+          if (!investmentId) {
+            const newInv = await tx.investment.create({
+              data: {
+                name: item.name,
+                ticker: item.ticker ?? null,
+                isin: item.isin ?? null,
+                platform: item.platform,
+                type: item.investmentType,
+                currency: "EUR",
+                userId,
+              },
+              select: { id: true },
+            });
+            investmentId = newInv.id;
+            investmentCache.set(nameKey, investmentId);
+            if (isinKey) investmentCache.set(isinKey, investmentId);
+            createdPositions++;
+          }
+ 
+          // 2. Crea la transazione
+          await tx.investmentTransaction.create({
+            data: {
+              investmentId,
+              type: item.txType,
+              quantity: item.quantity,
+              pricePerUnit: item.pricePerUnit,
+              fees: item.fees,
+              date: item.date,
+              notes: item.notes ?? null,
+              userId,
+            },
+          });
+ 
+          created++;
+        }
+      });
+ 
+      return { imported: created, createdPositions };
+    }),
+  
   // KPI aggregati portfolio — per la dashboard
   getSummary: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;

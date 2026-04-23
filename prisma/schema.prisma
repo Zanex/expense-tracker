@@ -126,6 +126,7 @@ model Investment {
   id                    String   @id @default(cuid())
   name                  String
   ticker                String?
+  isin                  String?
   platform              String
   type                  String
   currency              String   @default("EUR")
@@ -140,6 +141,7 @@ model Investment {
 
   @@index([userId, platform])
   @@index([userId, type])
+  @@index([userId, isin])
 }
 
 model InvestmentTransaction {
