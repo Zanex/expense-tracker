@@ -1,3 +1,4 @@
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { type Metadata, type Viewport } from "next";
 import { TRPCReactProvider } from "~/trpc/react";
 import { Toaster } from "~/components/ui/sonner";
@@ -53,6 +54,7 @@ export default function RootLayout({
           <TRPCReactProvider>
             {children}
             <Toaster />
+            <SpeedInsights />
           </TRPCReactProvider>
         </ThemeProvider>
       </body>
