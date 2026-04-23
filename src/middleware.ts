@@ -10,5 +10,6 @@ export const config = {
     "/categories/:path*",
     "/reports/:path*",
     "/trips/:path*",
+    "/investments/:path*",
   ],
 };

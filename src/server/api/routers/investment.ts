@@ -2,6 +2,9 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { toNumber } from "~/lib/utils";
+import YahooFinance from "yahoo-finance2";
+
+const yahooFinance = new YahooFinance();
 
 // ─── Constants ────────────────────────────────────────────
 
@@ -104,10 +107,11 @@ export function isPriceStale(updatedAt: Date | null): boolean {
 
 async function fetchYahooPrice(ticker: string): Promise<number | null> {
   try {
-    const yahooFinance = (await import("yahoo-finance2")).default;
     const quote = await yahooFinance.quote(ticker, {}, { validateResult: false });
-    return (quote as { regularMarketPrice?: number }).regularMarketPrice ?? null;
-  } catch {
+    const q = quote as unknown as { regularMarketPrice?: number; currentPrice?: number; bid?: number; ask?: number };
+    return q.regularMarketPrice ?? q.currentPrice ?? q.bid ?? q.ask ?? null;
+  } catch (error) {
+    console.error(`[Yahoo Finance] Error fetching price for ${ticker}:`, error);
     return null;
   }
 }
@@ -356,7 +360,7 @@ export const investmentRouter = createTRPCRouter({
     return { refreshed, failed, skipped: investments.length - stale.length };
   }),
 
-  // Prezzo manuale per strumenti senza ticker (GimmeS, fondi proprietary...)
+  // Prezzo manuale per strumenti senza ticker
   setManualPrice: protectedProcedure
     .input(z.object({
       id: z.string().cuid(),
