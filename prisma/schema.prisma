@@ -133,6 +133,14 @@ model Investment {
   currentPrice          Decimal? @db.Decimal(12, 4)
   currentPriceUpdatedAt DateTime?
   manualPrice           Decimal? @db.Decimal(12, 4)
+
+  // Cached performance metrics
+  currentQty            Decimal  @db.Decimal(18, 8) @default(0)
+  costBasis             Decimal  @db.Decimal(12, 4) @default(0)
+  realizedPnL           Decimal  @db.Decimal(12, 4) @default(0)
+  totalDividends        Decimal  @db.Decimal(12, 4) @default(0)
+  totalFees             Decimal  @db.Decimal(10, 2) @default(0)
+
   userId                String
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions          InvestmentTransaction[]

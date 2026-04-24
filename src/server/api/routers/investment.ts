@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { toNumber } from "~/lib/utils";
+import { type Prisma, type PrismaClient } from "@prisma/client";
 import YahooFinance from "yahoo-finance2";
 
 const yahooFinance = new YahooFinance();
@@ -150,19 +151,48 @@ const transactionCreateSchema = z.object({
   notes: z.string().max(500).optional(),
 });
 
+// ─── Metrics Helper ───────────────────────────────────────
+
+/**
+ * Ricalcola le metriche di un investimento e le salva nel DB.
+ * Da chiamare dopo ogni modifica alle transazioni.
+ */
+async function recalculateInvestmentMetrics(
+  db: PrismaClient | Prisma.TransactionClient,
+  investmentId: string,
+  userId: string
+) {
+  const transactions = await db.investmentTransaction.findMany({
+    where: { investmentId, userId },
+    orderBy: { date: "asc" },
+  });
+
+  const metrics = calculatePositionMetrics(transactions, null);
+
+  await db.investment.update({
+    where: { id: investmentId, userId },
+    data: {
+      currentQty: metrics.currentQty,
+      costBasis: metrics.costBasis,
+      realizedPnL: metrics.realizedPnL,
+      totalDividends: metrics.totalDividends,
+      totalFees: metrics.totalFees,
+    },
+  });
+
+  return metrics;
+}
+
 // ─── Router ──────────────────────────────────────────────
 
 export const investmentRouter = createTRPCRouter({
 
-  // Lista tutti gli investimenti con P&L calcolato
+  // Lista tutti gli investimenti con P&L calcolato (USA CACHE)
   getAll: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
 
     const investments = await ctx.db.investment.findMany({
       where: { userId },
-      include: {
-        transactions: { orderBy: { date: "asc" } },
-      },
       orderBy: [{ platform: "asc" }, { name: "asc" }],
     });
 
@@ -172,7 +202,19 @@ export const investmentRouter = createTRPCRouter({
         : inv.manualPrice != null ? toNumber(inv.manualPrice)
         : null;
 
-      const metrics = calculatePositionMetrics(inv.transactions, currentPrice);
+      // Usa i valori cachati invece di ricalcolarli dalle transazioni
+      const costBasis = toNumber(inv.costBasis);
+      const currentQty = toNumber(inv.currentQty);
+      const realizedPnL = toNumber(inv.realizedPnL);
+      const totalDividends = toNumber(inv.totalDividends);
+      const totalFees = toNumber(inv.totalFees);
+
+      const r = (n: number) => Math.round(n * 100) / 100;
+      const currentValue = currentPrice !== null && currentQty > 0 ? r(currentQty * currentPrice) : null;
+      const unrealizedPnL = currentValue !== null ? r(currentValue - costBasis) : null;
+      const unrealizedPct = costBasis > 0 && unrealizedPnL !== null ? Math.round((unrealizedPnL / costBasis) * 10000) / 100 : null;
+      const totalReturn = r((unrealizedPnL ?? 0) + realizedPnL + totalDividends);
+      const totalReturnPct = costBasis > 0 ? Math.round((totalReturn / costBasis) * 10000) / 100 : null;
 
       return {
         id: inv.id,
@@ -186,8 +228,17 @@ export const investmentRouter = createTRPCRouter({
         manualPrice: inv.manualPrice != null ? toNumber(inv.manualPrice) : null,
         isPriceStale: isPriceStale(inv.currentPriceUpdatedAt),
         hasTicker: !!inv.ticker,
-        transactionCount: inv.transactions.length,
-        ...metrics,
+        transactionCount: 0, // Informazione non più necessaria in lista o da caricare separatamente
+        currentQty,
+        costBasis,
+        currentValue,
+        unrealizedPnL,
+        unrealizedPct,
+        realizedPnL,
+        totalDividends,
+        totalFees,
+        totalReturn,
+        totalReturnPct,
       };
     });
   }),
@@ -298,9 +349,14 @@ export const investmentRouter = createTRPCRouter({
         }
       }
 
-      return ctx.db.investmentTransaction.create({
+      const res = await ctx.db.investmentTransaction.create({
         data: { ...input, userId },
       });
+
+      // Aggiorna cache
+      await recalculateInvestmentMetrics(ctx.db, input.investmentId, userId);
+
+      return res;
     }),
 
   // Elimina transazione
@@ -317,9 +373,14 @@ export const investmentRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Transazione non trovata" });
       }
 
-      return ctx.db.investmentTransaction.delete({
+      const res = await ctx.db.investmentTransaction.delete({
         where: { id: input.id, userId },
       });
+
+      // Aggiorna cache
+      await recalculateInvestmentMetrics(ctx.db, tx.investmentId, userId);
+
+      return res;
     }),
 
   // Fetch prezzi da Yahoo Finance (solo ticker non aggiornati nell'ultima ora)
@@ -493,16 +554,21 @@ export const investmentRouter = createTRPCRouter({
         }
       });
  
+      // 3. Ricalcola metriche per tutti gli investimenti toccati
+      const affectedInvestmentIds = Array.from(investmentCache.values());
+      for (const invId of affectedInvestmentIds) {
+        await recalculateInvestmentMetrics(ctx.db, invId, userId);
+      }
+
       return { imported: created, createdPositions };
     }),
   
-  // KPI aggregati portfolio — per la dashboard
+  // KPI aggregati portfolio — per la dashboard (USA CACHE)
   getSummary: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
 
     const investments = await ctx.db.investment.findMany({
       where: { userId },
-      include: { transactions: true },
     });
 
     if (investments.length === 0) {
@@ -532,30 +598,35 @@ export const investmentRouter = createTRPCRouter({
     const platformMap = new Map<string, number>();
     const typeMap = new Map<string, number>();
 
+    const r = (n: number) => Math.round(n * 100) / 100;
+
     for (const inv of investments) {
       const currentPrice =
         inv.currentPrice != null ? toNumber(inv.currentPrice)
         : inv.manualPrice != null ? toNumber(inv.manualPrice)
         : null;
 
-      const hasBuys = inv.transactions.some((t) => t.type === "buy");
-      if (currentPrice === null && hasBuys) pricesComplete = false;
+      const costBasis = toNumber(inv.costBasis);
+      const currentQty = toNumber(inv.currentQty);
+      const realizedPnL = toNumber(inv.realizedPnL);
+      const totalDividendsInv = toNumber(inv.totalDividends);
 
-      const m = calculatePositionMetrics(inv.transactions, currentPrice);
+      if (currentPrice === null && currentQty > 0) pricesComplete = false;
 
-      totalCostBasis += m.costBasis;
-      totalUnrealizedPnL += m.unrealizedPnL ?? 0;
-      totalRealizedPnL += m.realizedPnL;
-      totalDividends += m.totalDividends;
+      const currentValue = currentPrice !== null && currentQty > 0 ? r(currentQty * currentPrice) : null;
+      const unrealizedPnL = currentValue !== null ? r(currentValue - costBasis) : 0;
 
-      if (m.currentValue !== null) {
-        totalValue += m.currentValue;
-        platformMap.set(inv.platform, (platformMap.get(inv.platform) ?? 0) + m.currentValue);
-        typeMap.set(inv.type, (typeMap.get(inv.type) ?? 0) + m.currentValue);
+      totalCostBasis += costBasis;
+      totalUnrealizedPnL += unrealizedPnL;
+      totalRealizedPnL += realizedPnL;
+      totalDividends += totalDividendsInv;
+
+      if (currentValue !== null) {
+        totalValue += currentValue;
+        platformMap.set(inv.platform, (platformMap.get(inv.platform) ?? 0) + currentValue);
+        typeMap.set(inv.type, (typeMap.get(inv.type) ?? 0) + currentValue);
       }
     }
-
-    const r = (n: number) => Math.round(n * 100) / 100;
 
     const totalUnrealizedPct =
       totalCostBasis > 0
