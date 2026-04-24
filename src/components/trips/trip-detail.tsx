@@ -318,7 +318,7 @@ export function TripDetail({ tripId }: TripDetailProps) {
                           {formatCurrency(toNumber(expense.amount))}
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          <div className="flex items-center justify-end gap-1 transition-opacity md:opacity-0 md:group-hover:opacity-100">
                             <Button
                               variant="ghost"
                               size="icon"

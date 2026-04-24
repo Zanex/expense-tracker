@@ -119,7 +119,7 @@ export function TripCard({ trip, onEdit }: TripCardProps) {
             {statusCfg.label}
           </span>
 
-          <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="flex items-center gap-0.5 transition-opacity md:opacity-0 md:group-hover:opacity-100">
             <TripExportButton
               tripId={trip.id}
               tripName={trip.name}
