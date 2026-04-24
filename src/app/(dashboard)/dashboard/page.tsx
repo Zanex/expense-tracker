@@ -13,6 +13,8 @@ import { ExportButton } from "~/components/reports/export-button";
 import { OnboardingWizard } from "~/components/onboarding/onboarding-wizard";
 import { ChartErrorBoundary } from "~/components/ui/chart-error-boundary";
 import { ErrorBoundary } from "~/components/ui/error-boundary";
+import { InvestmentWidget } from "~/components/dashboard/investment-widget";
+import { AllocationChart } from "~/components/investments/allocation-chart";
 import { api } from "~/trpc/react";
 
 export default function DashboardPage() {
@@ -72,7 +74,7 @@ export default function DashboardPage() {
         <UpcomingRecurring month={filter.month} year={filter.year} />
 
         {/* Grafici */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <ChartErrorBoundary title="Spese per categoria">
             <ExpensesByCategory month={filter.month} year={filter.year} />
           </ChartErrorBoundary>
@@ -80,7 +82,13 @@ export default function DashboardPage() {
           <ChartErrorBoundary title="Andamento mensile">
             <MonthlyTrend month={filter.month} year={filter.year} months={6} />
           </ChartErrorBoundary>
+
+          <ChartErrorBoundary title="Allocazione investimenti">
+            <AllocationChart />
+          </ChartErrorBoundary>
         </div>
+
+        <InvestmentWidget />
     </div>
   );
 }
