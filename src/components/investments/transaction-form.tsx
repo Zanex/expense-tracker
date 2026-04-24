@@ -57,30 +57,45 @@ const TX_CONFIG = {
 interface TransactionFormProps {
   investmentId: string;
   investmentName: string;
+  transaction?: {
+    id: string;
+    type: "buy" | "sell" | "dividend" | "fee";
+    quantity: number;
+    pricePerUnit: number;
+    fees: number;
+    date: Date;
+    notes: string | undefined | null;
+  };
   onSuccess: () => void;
 }
 
 // ─── Component ───────────────────────────────────────────
 
-export function TransactionForm({ investmentId, investmentName, onSuccess }: TransactionFormProps) {
+export function TransactionForm({
+  investmentId,
+  investmentName,
+  transaction,
+  onSuccess,
+}: TransactionFormProps) {
   const utils = api.useUtils();
+  const isEditing = !!transaction;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      type: "buy",
-      quantity: "",
-      pricePerUnit: "",
-      fees: "",
-      date: formatDateInput(new Date()),
-      notes: "",
+      type: transaction?.type ?? "buy",
+      quantity: transaction?.quantity?.toString() ?? "",
+      pricePerUnit: transaction?.pricePerUnit?.toString() ?? "",
+      fees: transaction?.fees?.toString() ?? "",
+      date: formatDateInput(transaction?.date ?? new Date()),
+      notes: transaction?.notes ?? "",
     },
   });
 
   const txType = form.watch("type");
   const config = TX_CONFIG[txType];
 
-  const mutation = api.investment.addTransaction.useMutation({
+  const addMutation = api.investment.addTransaction.useMutation({
     onSuccess: async () => {
       await utils.investment.getAll.invalidate();
       await utils.investment.getById.invalidate({ id: investmentId });
@@ -91,16 +106,34 @@ export function TransactionForm({ investmentId, investmentName, onSuccess }: Tra
     onError: (err) => toast.error(err.message),
   });
 
+  const updateMutation = api.investment.updateTransaction.useMutation({
+    onSuccess: async () => {
+      await utils.investment.getAll.invalidate();
+      await utils.investment.getById.invalidate({ id: investmentId });
+      await utils.investment.getSummary.invalidate();
+      toast.success("Transazione aggiornata");
+      onSuccess();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const isPending = addMutation.isPending || updateMutation.isPending;
+
   function onSubmit(values: FormValues) {
-    mutation.mutate({
-      investmentId,
+    const payload = {
       type: values.type,
       quantity: parseFloat(values.quantity),
       pricePerUnit: parseFloat(values.pricePerUnit),
       fees: values.fees ? parseFloat(values.fees) : 0,
       date: new Date(values.date),
       notes: values.notes || undefined,
-    });
+    };
+
+    if (isEditing) {
+      updateMutation.mutate({ id: transaction!.id, ...payload });
+    } else {
+      addMutation.mutate({ investmentId, ...payload });
+    }
   }
 
   return (
@@ -267,8 +300,8 @@ export function TransactionForm({ investmentId, investmentName, onSuccess }: Tra
           )}
         />
 
-        <Button type="submit" disabled={mutation.isPending} className="mt-2">
-          {mutation.isPending ? "Salvataggio..." : "Aggiungi transazione"}
+        <Button type="submit" disabled={isPending} className="mt-2">
+          {isPending ? "Salvataggio..." : isEditing ? "Aggiorna transazione" : "Aggiungi transazione"}
         </Button>
       </form>
     </Form>

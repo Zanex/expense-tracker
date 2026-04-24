@@ -7,6 +7,7 @@ import { formatCurrency } from "~/lib/utils";
 import {
   TrendingUp, TrendingDown, Minus,
   Pencil, Trash2, Plus, Clock, AlertCircle,
+  History,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
@@ -27,6 +28,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { TransactionForm } from "./transaction-form";
+import { TransactionList } from "./transaction-list";
 import { InvestmentForm } from "./investment-form";
 import { cn } from "~/lib/utils";
 
@@ -96,6 +98,7 @@ function PnLBadge({ value, pct }: { value: number | null; pct: number | null }) 
 export function InvestmentCard({ investment: inv }: InvestmentCardProps) {
   const [txDialogOpen, setTxDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const utils = api.useUtils();
 
   const deleteMutation = api.investment.delete.useMutation({
@@ -157,10 +160,15 @@ export function InvestmentCard({ investment: inv }: InvestmentCardProps) {
           </div>
 
           {/* Azioni — visibili su hover */}
-          <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="flex items-center gap-1 transition-opacity md:opacity-0 md:group-hover:opacity-100">
             <Button variant="ghost" size="icon" className="h-7 w-7"
               onClick={() => setTxDialogOpen(true)}>
               <Plus className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7"
+              onClick={() => setHistoryDialogOpen(true)}
+              title="Cronologia transazioni">
+              <History className="h-3.5 w-3.5" />
             </Button>
             <Button variant="ghost" size="icon" className="h-7 w-7"
               onClick={() => setEditDialogOpen(true)}>
@@ -254,9 +262,13 @@ export function InvestmentCard({ investment: inv }: InvestmentCardProps) {
           <span>
             Investito {formatCurrency(inv.costBasis)}
           </span>
-          <span>
+          <button 
+            onClick={() => setHistoryDialogOpen(true)}
+            className="flex items-center gap-1 transition-colors hover:text-foreground"
+          >
+            <History className="h-3 w-3" />
             {inv.transactionCount} {inv.transactionCount === 1 ? "transazione" : "transazioni"}
-          </span>
+          </button>
         </div>
       </div>
 
@@ -284,6 +296,16 @@ export function InvestmentCard({ investment: inv }: InvestmentCardProps) {
             investment={inv}
             onSuccess={() => setEditDialogOpen(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog cronologia transazioni */}
+      <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Cronologia: {inv.name}</DialogTitle>
+          </DialogHeader>
+          <TransactionList investmentId={inv.id} investmentName={inv.name} />
         </DialogContent>
       </Dialog>
     </>

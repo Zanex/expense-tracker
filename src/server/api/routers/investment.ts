@@ -151,6 +151,16 @@ const transactionCreateSchema = z.object({
   notes: z.string().max(500).optional(),
 });
 
+const transactionUpdateSchema = z.object({
+  id: z.string().cuid(),
+  type: z.enum(TRANSACTION_TYPES).optional(),
+  quantity: z.number().positive().optional(),
+  pricePerUnit: z.number().positive().optional(),
+  fees: z.number().min(0).optional(),
+  date: z.date().optional(),
+  notes: z.string().max(500).optional().nullable(),
+});
+
 // ─── Metrics Helper ───────────────────────────────────────
 
 /**
@@ -193,6 +203,11 @@ export const investmentRouter = createTRPCRouter({
 
     const investments = await ctx.db.investment.findMany({
       where: { userId },
+      include: {
+        _count: {
+          select: { transactions: true },
+        },
+      },
       orderBy: [{ platform: "asc" }, { name: "asc" }],
     });
 
@@ -228,7 +243,7 @@ export const investmentRouter = createTRPCRouter({
         manualPrice: inv.manualPrice != null ? toNumber(inv.manualPrice) : null,
         isPriceStale: isPriceStale(inv.currentPriceUpdatedAt),
         hasTicker: !!inv.ticker,
-        transactionCount: 0, // Informazione non più necessaria in lista o da caricare separatamente
+        transactionCount: inv._count.transactions,
         currentQty,
         costBasis,
         currentValue,
@@ -253,6 +268,9 @@ export const investmentRouter = createTRPCRouter({
         where: { id: input.id, userId },
         include: {
           transactions: { orderBy: { date: "asc" } },
+          _count: {
+            select: { transactions: true },
+          },
         },
       });
 
@@ -273,6 +291,7 @@ export const investmentRouter = createTRPCRouter({
         manualPrice: inv.manualPrice != null ? toNumber(inv.manualPrice) : null,
         isPriceStale: isPriceStale(inv.currentPriceUpdatedAt),
         hasTicker: !!inv.ticker,
+        transactionCount: inv._count.transactions,
         ...metrics,
       };
     }),
@@ -378,6 +397,32 @@ export const investmentRouter = createTRPCRouter({
       });
 
       // Aggiorna cache
+      await recalculateInvestmentMetrics(ctx.db, tx.investmentId, userId);
+
+      return res;
+    }),
+
+  // Aggiorna transazione esistente
+  updateTransaction: protectedProcedure
+    .input(transactionUpdateSchema)
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...data } = input;
+      const userId = ctx.session.user.id;
+
+      const tx = await ctx.db.investmentTransaction.findUnique({
+        where: { id, userId },
+      });
+
+      if (!tx) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Transazione non trovata" });
+      }
+
+      const res = await ctx.db.investmentTransaction.update({
+        where: { id, userId },
+        data,
+      });
+
+      // Aggiorna cache dell'investimento collegato
       await recalculateInvestmentMetrics(ctx.db, tx.investmentId, userId);
 
       return res;
