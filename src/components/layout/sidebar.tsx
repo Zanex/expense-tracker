@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "~/lib/utils";
-import { LayoutDashboard, Receipt, Tag, BarChart2, Plane, X, TrendingUp } from "lucide-react";
+import { LayoutDashboard, Receipt, Tag, BarChart2, Plane, X, TrendingUp, Car } from "lucide-react";
 
 // ─── Nav items ────────────────────────────────────────────
 
@@ -14,6 +14,7 @@ const navItems = [
   { href: "/investments",  label: "Investimenti", icon: TrendingUp },
   { href: "/categories",   label: "Categorie",    icon: Tag },
   { href: "/reports",      label: "Report",       icon: BarChart2 },
+  { href: "/vehicle",      label: "Veicolo",      icon: Car },
 ];
 
 // ─── Nav content ─────────────────────────────────────────

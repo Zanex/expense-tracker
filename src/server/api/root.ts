@@ -4,6 +4,7 @@ import { expenseRouter } from "~/server/api/routers/expense";
 import { reportRouter } from "~/server/api/routers/report";
 import { tripRouter } from "~/server/api/routers/trip";
 import { investmentRouter } from "~/server/api/routers/investment";
+import { vehicleRouter } from "~/server/api/routers/vehicle";
 
 export const appRouter = createTRPCRouter({
   category: categoryRouter,
@@ -11,6 +12,7 @@ export const appRouter = createTRPCRouter({
   report: reportRouter,
   trip: tripRouter,
   investment: investmentRouter,
+  vehicle: vehicleRouter,
 });
 
 export type AppRouter = typeof appRouter;
