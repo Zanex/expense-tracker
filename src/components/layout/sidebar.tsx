@@ -11,10 +11,10 @@ const navItems = [
   { href: "/dashboard",    label: "Dashboard",    icon: LayoutDashboard },
   { href: "/expenses",     label: "Spese",        icon: Receipt },
   { href: "/trips",        label: "Viaggi",       icon: Plane },
+  { href: "/vehicle",      label: "Veicolo",      icon: Car },
   { href: "/investments",  label: "Investimenti", icon: TrendingUp },
   { href: "/categories",   label: "Categorie",    icon: Tag },
   { href: "/reports",      label: "Report",       icon: BarChart2 },
-  { href: "/vehicle",      label: "Veicolo",      icon: Car },
 ];
 
 // ─── Nav content ─────────────────────────────────────────

@@ -22,6 +22,10 @@ const expenseCreateSchema = z.object({
   recurringFrequency: z.enum(["monthly", "weekly", "yearly"]).optional(),
   recurringEndDate: z.date().optional(),
   tripId: z.string().cuid("ID viaggio non valido").optional().nullable(),
+  vehicleId: z.string().cuid().optional().nullable(),
+  liters: z.number().positive().optional(),
+  kmAtRefuel: z.number().int().positive().optional(),
+  fullTank: z.boolean().optional(),
 });
 
 const expenseUpdateSchema = z.object({
@@ -42,6 +46,10 @@ const expenseUpdateSchema = z.object({
   recurringFrequency: z.enum(["monthly", "weekly", "yearly"]).optional().nullable(),
   recurringEndDate: z.date().optional().nullable(),
   tripId: z.string().cuid("ID viaggio non valido").optional().nullable(),
+  vehicleId: z.string().cuid().optional().nullable(),
+  liters: z.number().positive().optional().nullable(),
+  kmAtRefuel: z.number().int().positive().optional().nullable(),
+  fullTank: z.boolean().optional(),
 });
 
 const expenseFiltersSchema = z.object({
@@ -54,6 +62,8 @@ const expenseFiltersSchema = z.object({
   page: z.number().min(1).default(1),
   limit: z.number().min(1).max(100).default(20),
   tripId: z.string().cuid().optional(),
+  vehicleId: z.string().cuid().optional(),
+  onlyRefuels: z.boolean().optional(),
 });
 
 // ─── Helpers ─────────────────────────────────────────────
@@ -82,6 +92,8 @@ export const expenseRouter = createTRPCRouter({
           },
         }),
         ...(tripId && { tripId }),
+        ...(input.vehicleId && { vehicleId: input.vehicleId }),
+        ...(input.onlyRefuels && { liters: { not: null } }),
       };
 
       const [expenses, totalCount] = await Promise.all([
@@ -143,6 +155,14 @@ export const expenseRouter = createTRPCRouter({
         if (!trip) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Viaggio non trovato" });
         }
+      }
+
+      if (input.vehicleId) {
+        const vehicle = await ctx.db.vehicle.findUnique({
+          where: { id: input.vehicleId, userId: ctx.session.user.id },
+          select: { id: true },
+        });
+        if (!vehicle) throw new TRPCError({ code: "NOT_FOUND", message: "Veicolo non trovato" });
       }
 
       return ctx.db.expense.create({

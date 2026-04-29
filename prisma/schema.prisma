@@ -101,6 +101,10 @@ model Expense {
   vehicleId   String?
   vehicle     Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
 
+  liters          Decimal? @db.Decimal(8, 2)
+  kmAtRefuel      Int?
+  fullTank        Boolean  @default(true)
+
   @@index([userId, date])           // performance dashboard query
   @@index([userId, isRecurring])    // performance processRecurring
   @@index([userId, tripId])
@@ -187,27 +191,8 @@ model Vehicle {
   userId      String
   user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   expenses    Expense[]
-  refuels     VehicleRefuel[]
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
   @@index([userId])
-}
-
-model VehicleRefuel {
-  id              String   @id @default(cuid())
-  vehicleId       String
-  vehicle         Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  date            DateTime
-  liters          Decimal  @db.Decimal(8, 2)
-  pricePerLiter   Decimal  @db.Decimal(6, 4)
-  totalCost       Decimal  @db.Decimal(8, 2)
-  kmAtRefuel      Int
-  fullTank        Boolean  @default(true)
-  notes           String?
-  userId          String
-  createdAt       DateTime @default(now())
-
-  @@index([vehicleId, date])
-  @@index([userId, date])
 }

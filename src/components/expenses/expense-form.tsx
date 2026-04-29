@@ -45,6 +45,7 @@ const baseSchema = z.object({
   recurringFrequency: z.enum(["monthly", "weekly", "yearly"]).optional(),
   recurringEndDate: z.string().optional(),
   tripId: z.string().cuid().optional().nullable(),
+  vehicleId: z.string().cuid().optional().nullable(),
 });
 
 const formSchema = baseSchema.refine(
@@ -70,8 +71,10 @@ interface ExpenseFormProps {
     recurringFrequency?: string | null;
     recurringEndDate?: Date | null;
     tripId?: string | null;
+    vehicleId?: string | null;
   };
   defaultTripId?: string | null;
+  vehicleId?: string | null;
   onSuccess: () => void;
 }
 
@@ -85,7 +88,7 @@ const FREQUENCY_OPTIONS = [
 
 // ─── Component ───────────────────────────────────────────
 
-export function ExpenseForm({ expense, defaultTripId, onSuccess }: ExpenseFormProps) {
+export function ExpenseForm({ expense, defaultTripId, vehicleId, onSuccess }: ExpenseFormProps) {
   const isEditing = !!expense;
   const utils = api.useUtils();
   const { data: categories } = api.category.getAll.useQuery();
@@ -104,6 +107,7 @@ export function ExpenseForm({ expense, defaultTripId, onSuccess }: ExpenseFormPr
         ? formatDateInput(expense.recurringEndDate)
         : "",
       tripId: expense?.tripId ?? defaultTripId ?? null,
+      vehicleId: expense?.vehicleId ?? vehicleId ?? null,
     },
   });
 
@@ -153,6 +157,7 @@ export function ExpenseForm({ expense, defaultTripId, onSuccess }: ExpenseFormPr
           ? new Date(values.recurringEndDate)
           : undefined,
       tripId: values.tripId ?? undefined,
+      vehicleId: values.vehicleId ?? undefined,
     };
 
     if (isEditing) {
@@ -272,6 +277,42 @@ export function ExpenseForm({ expense, defaultTripId, onSuccess }: ExpenseFormPr
                           <span>{trip.coverEmoji ?? "✈️"}</span>
                           <span>{trip.name}</span>
                         </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            );
+          }}
+        />
+
+        <FormField
+          control={form.control}
+          name="vehicleId"
+          render={({ field }) => {
+            const { data: vehicles } = api.vehicle.getAll.useQuery();
+            if (!vehicles?.length) return <></>;
+            return (
+              <FormItem>
+                <FormLabel>
+                  Veicolo{" "}
+                  <span className="text-xs font-normal text-muted-foreground">(opzionale)</span>
+                </FormLabel>
+                <Select
+                  onValueChange={(v) => field.onChange(v === "none" ? null : v)}
+                  value={field.value ?? "none"}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Nessun veicolo" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="none">Nessun veicolo</SelectItem>
+                    {vehicles.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        🚗 {v.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
