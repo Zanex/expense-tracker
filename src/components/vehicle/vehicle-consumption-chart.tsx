@@ -150,7 +150,7 @@ export function VehicleConsumptionChart({ vehicleId }: VehicleConsumptionChartPr
   const { data, isLoading } = api.expense.getAll.useQuery({
     vehicleId,
     page: 1,
-    limit: 200,
+    limit: 100,
   });
 
   if (isLoading) return <ChartSkeleton />;
