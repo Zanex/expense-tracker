@@ -15,6 +15,7 @@ import { ChartErrorBoundary } from "~/components/ui/chart-error-boundary";
 import { ErrorBoundary } from "~/components/ui/error-boundary";
 import { InvestmentWidget } from "~/components/dashboard/investment-widget";
 import { AllocationChart } from "~/components/investments/allocation-chart";
+import { VehicleWidget } from "~/components/dashboard/vehicle-widget";
 import { api } from "~/trpc/react";
 
 export default function DashboardPage() {
@@ -89,6 +90,7 @@ export default function DashboardPage() {
         </div>
 
         <InvestmentWidget />
+        <VehicleWidget />
     </div>
   );
 }

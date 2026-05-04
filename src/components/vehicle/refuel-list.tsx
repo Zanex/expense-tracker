@@ -17,15 +17,19 @@ import { Pagination } from "~/components/expenses/pagination";
 
 interface RefuelListProps {
   vehicleId: string;
+  month: number;
+  year: number;
 }
 
-export function RefuelList({ vehicleId }: RefuelListProps) {
+export function RefuelList({ vehicleId, month, year }: RefuelListProps) {
   const [page, setPage] = useState(1);
   const utils = api.useUtils();
 
   const { data, isLoading } = api.expense.getAll.useQuery({
     vehicleId,
     page,
+    month,
+    year,
     limit: 10,
     onlyRefuels: true,
   });

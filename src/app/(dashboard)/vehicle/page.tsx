@@ -15,7 +15,11 @@ import { VehicleMonthlyChart } from "~/components/vehicle/vehicle-monthly-chart"
 import { RefuelForm } from "~/components/vehicle/refuel-form";
 import { RefuelList } from "~/components/vehicle/refuel-list";
 import { VehicleExpenseList } from "~/components/vehicle/vehicle-expense-list";
+import { VehicleConsumptionChart } from "~/components/vehicle/vehicle-consumption-chart";
+import { VehicleExportButton } from "~/components/vehicle/vehicle-export-button";
+import { MonthFilterControl } from "~/components/dashboard/month-filter";
 import { ChartErrorBoundary } from "~/components/ui/chart-error-boundary";
+import { useMonthFilter } from "~/hooks/use-month-filter";
 import { cn } from "~/lib/utils";
 
 type Tab = "rifornimenti" | "spese";
@@ -33,9 +37,9 @@ export default function VehiclePage() {
   const [addRefuelOpen, setAddRefuelOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("rifornimenti");
 
-  const { data: vehicles, isLoading } = api.vehicle.getAll.useQuery();
+  const filter = useMonthFilter();
 
-  // Per ora supportiamo un solo veicolo — prende il primo
+  const { data: vehicles, isLoading } = api.vehicle.getAll.useQuery();
   const vehicle = vehicles?.[0];
 
   // ─── Loading ───────────────────────────────────────────
@@ -57,7 +61,7 @@ export default function VehiclePage() {
     );
   }
 
-  // ─── Empty state — nessun veicolo ─────────────────────
+  // ─── Empty state ───────────────────────────────────────
 
   if (!vehicle) {
     return (
@@ -66,22 +70,15 @@ export default function VehiclePage() {
           <h1 className="text-2xl font-bold">Veicolo</h1>
           <p className="text-sm text-muted-foreground">Traccia i costi della tua auto.</p>
         </div>
-
         <EmptyState
           icon={Car}
           title="Nessun veicolo"
           description="Aggiungi il tuo veicolo per iniziare a tracciare rifornimenti e spese."
-          action={{
-            label: "Aggiungi veicolo",
-            onClick: () => setCreateVehicleOpen(true),
-          }}
+          action={{ label: "Aggiungi veicolo", onClick: () => setCreateVehicleOpen(true) }}
         />
-
         <Dialog open={createVehicleOpen} onOpenChange={setCreateVehicleOpen}>
           <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Aggiungi veicolo</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Aggiungi veicolo</DialogTitle></DialogHeader>
             <VehicleForm onSuccess={() => setCreateVehicleOpen(false)} />
           </DialogContent>
         </Dialog>
@@ -95,20 +92,21 @@ export default function VehiclePage() {
     <>
       <div className="flex flex-col gap-6">
 
-        {/* Header veicolo */}
-        <div
-          className="flex flex-col gap-3 rounded-xl p-5 sm:flex-row sm:items-start sm:justify-between"
-          style={{ backgroundColor: "#6366f118", border: "1.5px solid #6366f128" }}
-        >
-          <div className="flex items-start gap-4">
+        {/* Header veicolo + filtro mese */}
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          {/* Info veicolo */}
+          <div
+            className="flex flex-1 items-start gap-4 rounded-xl p-4"
+            style={{ backgroundColor: "#6366f118", border: "1.5px solid #6366f128" }}
+          >
             <span
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-2xl shadow"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-2xl shadow"
               style={{ backgroundColor: "#6366f1" }}
             >
               🚗
             </span>
             <div className="flex flex-col gap-1">
-              <h1 className="text-2xl font-bold" style={{ color: "#6366f1" }}>
+              <h1 className="text-xl font-bold" style={{ color: "#6366f1" }}>
                 {vehicle.name}
               </h1>
               <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -125,30 +123,46 @@ export default function VehiclePage() {
             </div>
           </div>
 
-          <div className="flex shrink-0 flex-wrap gap-2 self-start">
-            <Button variant="outline" size="sm" onClick={() => setAddRefuelOpen(true)}>
-              <Fuel className="mr-1.5 h-3.5 w-3.5" />
-              Rifornimento
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setEditVehicleOpen(true)}>
-              <Pencil className="mr-1.5 h-3.5 w-3.5" />
-              Modifica
-            </Button>
+          {/* Controlli destra */}
+          <div className="flex flex-col items-end gap-2">
+            {/* Filtro mese */}
+            <MonthFilterControl filter={filter} />
+            {/* Azioni */}
+            <div className="flex gap-2">
+              <VehicleExportButton
+                vehicleId={vehicle.id}
+                vehicleName={vehicle.name}
+              />
+              <Button variant="outline" size="sm" onClick={() => setAddRefuelOpen(true)}>
+                <Fuel className="mr-1.5 h-3.5 w-3.5" />
+                Rifornimento
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setEditVehicleOpen(true)}>
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                Modifica
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* KPI Grid */}
-        <VehicleKpiGrid vehicleId={vehicle.id} />
+        {/* KPI Grid — filtrati per mese */}
+        <VehicleKpiGrid
+          vehicleId={vehicle.id}
+          month={filter.month}
+          year={filter.year}
+        />
 
         {/* Grafico mensile */}
         <ChartErrorBoundary title="Costi mensili">
           <VehicleMonthlyChart vehicleId={vehicle.id} />
         </ChartErrorBoundary>
 
-        {/* Tab rifornimenti / spese */}
+        <ChartErrorBoundary title="Consumo nel tempo">
+          <VehicleConsumptionChart vehicleId={vehicle.id} />
+        </ChartErrorBoundary>
+        {/* Tab rifornimenti / spese — filtrati per mese */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            {/* Tabs */}
             <div className="flex gap-1 rounded-lg border bg-muted/30 p-1 w-fit">
               {(["rifornimenti", "spese"] as Tab[]).map((tab) => (
                 <button
@@ -180,29 +194,32 @@ export default function VehiclePage() {
           </div>
 
           {activeTab === "rifornimenti" ? (
-            <RefuelList vehicleId={vehicle.id} />
+            <RefuelList
+              vehicleId={vehicle.id}
+              month={filter.month}
+              year={filter.year}
+            />
           ) : (
-            <VehicleExpenseList vehicleId={vehicle.id} />
+            <VehicleExpenseList
+              vehicleId={vehicle.id}
+              month={filter.month}
+              year={filter.year}
+            />
           )}
         </div>
       </div>
 
-      {/* Dialog modifica veicolo */}
+      {/* Dialogs */}
       <Dialog open={editVehicleOpen} onOpenChange={setEditVehicleOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Modifica veicolo</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Modifica veicolo</DialogTitle></DialogHeader>
           <VehicleForm vehicle={vehicle} onSuccess={() => setEditVehicleOpen(false)} />
         </DialogContent>
       </Dialog>
 
-      {/* Dialog rifornimento */}
       <Dialog open={addRefuelOpen} onOpenChange={setAddRefuelOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Nuovo rifornimento</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Nuovo rifornimento</DialogTitle></DialogHeader>
           <RefuelForm vehicleId={vehicle.id} onSuccess={() => setAddRefuelOpen(false)} />
         </DialogContent>
       </Dialog>

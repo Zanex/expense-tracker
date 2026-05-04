@@ -47,10 +47,12 @@ function KpiCard({ title, value, description, icon: Icon, isLoading }: KpiCardPr
 
 interface VehicleKpiGridProps {
   vehicleId: string;
+  month: number;
+  year: number;
 }
 
-export function VehicleKpiGrid({ vehicleId }: VehicleKpiGridProps) {
-  const { data: summary, isLoading } = api.vehicle.getSummary.useQuery({ vehicleId });
+export function VehicleKpiGrid({ vehicleId, month, year }: VehicleKpiGridProps) {
+  const { data: summary, isLoading } = api.vehicle.getSummary.useQuery({ vehicleId, month, year });
 
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">

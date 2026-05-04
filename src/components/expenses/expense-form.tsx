@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,22 +9,13 @@ import { toast } from "sonner";
 import { formatDateInput, toNumber } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "~/components/ui/select";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, ChevronDown, Plane, Car } from "lucide-react";
 import { cn } from "~/lib/utils";
 
 // ─── Schema ──────────────────────────────────────────────
@@ -74,24 +66,93 @@ interface ExpenseFormProps {
     vehicleId?: string | null;
   };
   defaultTripId?: string | null;
-  vehicleId?: string | null;
+  defaultVehicleId?: string | null;
   onSuccess: () => void;
 }
 
-// ─── Frequency label map ──────────────────────────────────
+// ─── Sezione collassabile ─────────────────────────────────
+
+interface SectionProps {
+  label: string;
+  icon: React.ReactNode;
+  isOpen: boolean;
+  onToggle: () => void;
+  badge?: string;
+  children: React.ReactNode;
+}
+
+function CollapsibleSection({
+  label, icon, isOpen, onToggle, badge, children,
+}: SectionProps) {
+  return (
+    <div className="rounded-lg border overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        className={cn(
+          "flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm font-medium transition-colors",
+          isOpen
+            ? "bg-muted/50 text-foreground"
+            : "bg-transparent text-muted-foreground hover:bg-muted/30 hover:text-foreground"
+        )}
+      >
+        {icon}
+        {label}
+        {badge && (
+          <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+            {badge}
+          </span>
+        )}
+        <ChevronDown
+          className={cn(
+            "ml-auto h-4 w-4 shrink-0 transition-transform duration-200",
+            isOpen && "rotate-180"
+          )}
+        />
+      </button>
+
+      {isOpen && (
+        <div className="border-t bg-muted/10 px-4 py-4">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Frequency options ────────────────────────────────────
 
 const FREQUENCY_OPTIONS = [
   { value: "monthly", label: "Ogni mese" },
-  { value: "weekly", label: "Ogni settimana" },
-  { value: "yearly", label: "Ogni anno" },
+  { value: "weekly",  label: "Ogni settimana" },
+  { value: "yearly",  label: "Ogni anno" },
 ] as const;
 
 // ─── Component ───────────────────────────────────────────
 
-export function ExpenseForm({ expense, defaultTripId, vehicleId, onSuccess }: ExpenseFormProps) {
+export function ExpenseForm({
+  expense,
+  defaultTripId,
+  defaultVehicleId,
+  onSuccess,
+}: ExpenseFormProps) {
   const isEditing = !!expense;
   const utils = api.useUtils();
+
   const { data: categories } = api.category.getAll.useQuery();
+  const { data: trips } = api.trip.getAll.useQuery({ status: "all" });
+  const { data: vehicles } = api.vehicle.getAll.useQuery();
+
+  // Sezioni aperte di default solo se hanno un valore precompilato
+  const [tripOpen, setTripOpen] = useState(
+    !!(expense?.tripId ?? defaultTripId)
+  );
+  const [vehicleOpen, setVehicleOpen] = useState(
+    !!(expense?.vehicleId ?? defaultVehicleId)
+  );
+  const [recurringOpen, setRecurringOpen] = useState(
+    !!(expense?.isRecurring)
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -107,13 +168,18 @@ export function ExpenseForm({ expense, defaultTripId, vehicleId, onSuccess }: Ex
         ? formatDateInput(expense.recurringEndDate)
         : "",
       tripId: expense?.tripId ?? defaultTripId ?? null,
-      vehicleId: expense?.vehicleId ?? vehicleId ?? null,
+      vehicleId: expense?.vehicleId ?? defaultVehicleId ?? null,
     },
   });
 
   const isRecurring = form.watch("isRecurring");
 
-  // ─── Mutations ─────────────────────────────────────────
+  // ─── Badge sezioni ────────────────────────────────────
+
+  const selectedTrip = trips?.find((t) => t.id === form.watch("tripId"));
+  const selectedVehicle = vehicles?.find((v) => v.id === form.watch("vehicleId"));
+
+  // ─── Invalidazione cache ──────────────────────────────
 
   const invalidateAll = async () => {
     await Promise.all([
@@ -123,6 +189,8 @@ export function ExpenseForm({ expense, defaultTripId, vehicleId, onSuccess }: Ex
       utils.report.getMonthlyTrend.invalidate(),
     ]);
   };
+
+  // ─── Mutations ────────────────────────────────────────
 
   const createMutation = api.expense.create.useMutation({
     onSuccess: async () => {
@@ -142,7 +210,7 @@ export function ExpenseForm({ expense, defaultTripId, vehicleId, onSuccess }: Ex
     onError: (err) => toast.error(err.message),
   });
 
-  // ─── Submit ────────────────────────────────────────────
+  // ─── Submit ───────────────────────────────────────────
 
   function onSubmit(values: FormValues) {
     const payload = {
@@ -169,11 +237,14 @@ export function ExpenseForm({ expense, defaultTripId, vehicleId, onSuccess }: Ex
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
-  // ─── Render ────────────────────────────────────────────
+  // ─── Render ───────────────────────────────────────────
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+
+        {/* ── Campi base — sempre visibili ──────────── */}
+
         {/* Importo */}
         <FormField
           control={form.control}
@@ -182,7 +253,13 @@ export function ExpenseForm({ expense, defaultTripId, vehicleId, onSuccess }: Ex
             <FormItem>
               <FormLabel>Importo (€)</FormLabel>
               <FormControl>
-                <Input type="number" step="0.01" min="0.01" placeholder="0.00" {...field} />
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="0.00"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -197,7 +274,10 @@ export function ExpenseForm({ expense, defaultTripId, vehicleId, onSuccess }: Ex
             <FormItem>
               <FormLabel>Descrizione</FormLabel>
               <FormControl>
-                <Input placeholder="Es. Affitto, abbonamento Netflix..." {...field} />
+                <Input
+                  placeholder="Es. Affitto, abbonamento Netflix..."
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -219,7 +299,6 @@ export function ExpenseForm({ expense, defaultTripId, vehicleId, onSuccess }: Ex
               </FormItem>
             )}
           />
-
           <FormField
             control={form.control}
             name="categoryId"
@@ -249,134 +328,129 @@ export function ExpenseForm({ expense, defaultTripId, vehicleId, onSuccess }: Ex
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="tripId"
-          render={({ field }) => {
-            const { data: trips } = api.trip.getAll.useQuery({ status: "all" });
-            return (
-              <FormItem>
-                <FormLabel>
-                  Viaggio{" "}
-                  <span className="text-xs font-normal text-muted-foreground">(opzionale)</span>
-                </FormLabel>
-                <Select
-                  onValueChange={(v) => field.onChange(v === "none" ? null : v)}
-                  value={field.value ?? "none"}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Nessun viaggio" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="none">Nessun viaggio</SelectItem>
-                    {trips?.map((trip) => (
-                      <SelectItem key={trip.id} value={trip.id}>
-                        <span className="flex items-center gap-2">
-                          <span>{trip.coverEmoji ?? "✈️"}</span>
-                          <span>{trip.name}</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            );
-          }}
-        />
+        {/* ── Sezioni collassabili ──────────────────── */}
 
-        <FormField
-          control={form.control}
-          name="vehicleId"
-          render={({ field }) => {
-            const { data: vehicles } = api.vehicle.getAll.useQuery();
-            if (!vehicles?.length) return <></>;
-            return (
-              <FormItem>
-                <FormLabel>
-                  Veicolo{" "}
-                  <span className="text-xs font-normal text-muted-foreground">(opzionale)</span>
-                </FormLabel>
-                <Select
-                  onValueChange={(v) => field.onChange(v === "none" ? null : v)}
-                  value={field.value ?? "none"}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Nessun veicolo" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="none">Nessun veicolo</SelectItem>
-                    {vehicles.map((v) => (
-                      <SelectItem key={v.id} value={v.id}>
-                        🚗 {v.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            );
-          }}
-        />
-
-        {/* ─── Toggle Ricorrenza ─────────────────────── */}
-        <FormField
-          control={form.control}
-          name="isRecurring"
-          render={({ field }) => (
-            <FormItem>
-              <button
-                type="button"
-                onClick={() => field.onChange(!field.value)}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm transition-colors",
-                  field.value
-                    ? "border-primary/30 bg-primary/5 text-primary"
-                    : "border-border bg-muted/30 text-muted-foreground hover:border-border hover:bg-muted/50"
-                )}
-              >
-                <RefreshCw
-                  className={cn(
-                    "h-4 w-4 shrink-0 transition-transform",
-                    field.value && "animate-spin-slow text-primary"
-                  )}
-                />
-                <div className="flex flex-col gap-0.5">
-                  <span className={cn("font-medium", field.value && "text-primary")}>
-                    Spesa ricorrente
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Ripeti automaticamente questa spesa
-                  </span>
-                </div>
-                {/* Toggle visivo */}
-                <div className="ml-auto">
-                  <div
-                    className={cn(
-                      "relative h-5 w-9 rounded-full transition-colors",
-                      field.value ? "bg-primary" : "bg-muted-foreground/30"
-                    )}
+        {/* Viaggio */}
+        {!!trips?.length && (
+          <CollapsibleSection
+            label="Collega a viaggio"
+            icon={<Plane className="h-4 w-4" />}
+            isOpen={tripOpen}
+            onToggle={() => {
+              setTripOpen((v) => {
+                // Chiudendo, resetta il valore
+                if (v) form.setValue("tripId", null);
+                return !v;
+              });
+            }}
+            badge={selectedTrip ? selectedTrip.name : undefined}
+          >
+            <FormField
+              control={form.control}
+              name="tripId"
+              render={({ field }) => (
+                <FormItem>
+                  <Select
+                    onValueChange={(v) => field.onChange(v === "none" ? null : v)}
+                    value={field.value ?? "none"}
                   >
-                    <div
-                      className={cn(
-                        "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
-                        field.value ? "translate-x-4" : "translate-x-0.5"
-                      )}
-                    />
-                  </div>
-                </div>
-              </button>
-            </FormItem>
-          )}
-        />
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Nessun viaggio" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">Nessun viaggio</SelectItem>
+                      {trips.map((trip) => (
+                        <SelectItem key={trip.id} value={trip.id}>
+                          <span className="flex items-center gap-2">
+                            <span>{trip.coverEmoji ?? "✈️"}</span>
+                            <span>{trip.name}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CollapsibleSection>
+        )}
 
-        {/* Opzioni ricorrenza — visibili solo se attivo */}
-        {isRecurring && (
-          <div className="flex flex-col gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
+        {/* Veicolo */}
+        {!!vehicles?.length && (
+          <CollapsibleSection
+            label="Collega a veicolo"
+            icon={<Car className="h-4 w-4" />}
+            isOpen={vehicleOpen}
+            onToggle={() => {
+              setVehicleOpen((v) => {
+                if (v) form.setValue("vehicleId", null);
+                return !v;
+              });
+            }}
+            badge={selectedVehicle ? selectedVehicle.name : undefined}
+          >
+            <FormField
+              control={form.control}
+              name="vehicleId"
+              render={({ field }) => (
+                <FormItem>
+                  <Select
+                    onValueChange={(v) => field.onChange(v === "none" ? null : v)}
+                    value={field.value ?? "none"}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Nessun veicolo" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">Nessun veicolo</SelectItem>
+                      {vehicles.map((v) => (
+                        <SelectItem key={v.id} value={v.id}>
+                          <span className="flex items-center gap-2">
+                            <span>🚗</span>
+                            <span>{v.name}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CollapsibleSection>
+        )}
+
+        {/* Ricorrenza */}
+        <CollapsibleSection
+          label="Spesa ricorrente"
+          icon={<RefreshCw className="h-4 w-4" />}
+          isOpen={recurringOpen}
+          onToggle={() => {
+            setRecurringOpen((v) => {
+              if (v) {
+                form.setValue("isRecurring", false);
+                form.setValue("recurringFrequency", undefined);
+                form.setValue("recurringEndDate", "");
+              } else {
+                form.setValue("isRecurring", true);
+              }
+              return !v;
+            });
+          }}
+          badge={
+            isRecurring && form.watch("recurringFrequency")
+              ? FREQUENCY_OPTIONS.find(
+                  (o) => o.value === form.watch("recurringFrequency")
+                )?.label
+              : undefined
+          }
+        >
+          <div className="flex flex-col gap-4">
             {/* Frequenza */}
             <FormField
               control={form.control}
@@ -384,20 +458,23 @@ export function ExpenseForm({ expense, defaultTripId, vehicleId, onSuccess }: Ex
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Frequenza</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Ogni quanto?" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {FREQUENCY_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="grid grid-cols-3 gap-2">
+                    {FREQUENCY_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => field.onChange(opt.value)}
+                        className={cn(
+                          "rounded-lg border px-3 py-2 text-sm font-medium transition-all",
+                          field.value === opt.value
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-background text-muted-foreground hover:border-primary/40"
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -423,8 +500,9 @@ export function ExpenseForm({ expense, defaultTripId, vehicleId, onSuccess }: Ex
               )}
             />
           </div>
-        )}
+        </CollapsibleSection>
 
+        {/* Submit */}
         <Button type="submit" disabled={isPending} className="mt-2">
           {isPending
             ? isEditing ? "Salvataggio..." : "Aggiunta..."

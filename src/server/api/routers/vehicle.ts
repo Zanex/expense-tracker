@@ -50,12 +50,17 @@ export const vehicleRouter = createTRPCRouter({
 
   // KPI aggregati del veicolo
   getSummary: protectedProcedure
-    .input(z.object({ vehicleId: z.string().cuid() }))
+    .input(z.object({
+      vehicleId: z.string().cuid(),
+      month: z.number().min(1).max(12),
+      year: z.number().min(2000).max(2100),
+    }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
+      const { vehicleId, month, year } = input;
 
       const vehicle = await ctx.db.vehicle.findUnique({
-        where: { id: input.vehicleId, userId },
+        where: { id: vehicleId, userId },
         select: { id: true, initialKm: true },
       });
 
@@ -63,9 +68,13 @@ export const vehicleRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Veicolo non trovato" });
       }
 
-      // Una sola query — tutte le spese del veicolo
+      const dateFilter = {
+        gte: new Date(year, month - 1, 1),
+        lt: new Date(year, month, 1),
+      };
+
       const expenses = await ctx.db.expense.findMany({
-        where: { userId, vehicleId: input.vehicleId },
+        where: { userId, vehicleId, date: dateFilter },
         select: {
           amount: true,
           date: true,
@@ -76,34 +85,34 @@ export const vehicleRouter = createTRPCRouter({
         orderBy: { kmAtRefuel: "asc" },
       });
 
-      // Spese non-carburante
       const totalExpenses = expenses
         .filter((e) => e.liters === null)
         .reduce((sum, e) => sum + toNumber(e.amount), 0);
 
-      // Rifornimenti
       const refuels = expenses.filter((e) => e.liters !== null);
       const totalFuel = refuels.reduce((sum, e) => sum + toNumber(e.amount), 0);
       const totalLiters = refuels.reduce((sum, e) => sum + toNumber(e.liters), 0);
 
-      // Km percorsi
+      // Km percorsi nel mese — differenza tra primo e ultimo km registrato
       const refuelsWithKm = refuels.filter((e) => e.kmAtRefuel !== null);
-      const lastKm = refuelsWithKm.at(-1)?.kmAtRefuel ?? vehicle.initialKm;
-      const totalKm = lastKm - vehicle.initialKm;
+      const firstKmInMonth = refuelsWithKm[0]?.kmAtRefuel ?? null;
+      const lastKmInMonth = refuelsWithKm.at(-1)?.kmAtRefuel ?? null;
+      const totalKm = firstKmInMonth && lastKmInMonth
+        ? lastKmInMonth - firstKmInMonth
+        : null;
 
-      // Costo per km
       const totalCost = totalExpenses + totalFuel;
-      const costPerKm = totalKm > 0
+      const costPerKm = totalKm && totalKm > 0
         ? Math.round((totalCost / totalKm) * 100) / 100
         : null;
 
-      // Consumo medio L/100km (solo full tank)
-      const fullTankRefuels = refuels.filter((e) => e.fullTank && e.kmAtRefuel !== null);
+      // Consumo medio nel mese (solo full tank)
+      const fullTankRefuels = refuelsWithKm.filter((e) => e.fullTank);
       let avgConsumption: number | null = null;
       if (fullTankRefuels.length >= 2) {
-        const firstKm = fullTankRefuels[0]!.kmAtRefuel!;
-        const lastKm = fullTankRefuels.at(-1)!.kmAtRefuel!;
-        const kmDriven = lastKm - firstKm;
+        const first = fullTankRefuels[0]!.kmAtRefuel!;
+        const last = fullTankRefuels.at(-1)!.kmAtRefuel!;
+        const kmDriven = last - first;
         const litersUsed = fullTankRefuels
           .slice(1)
           .reduce((sum, e) => sum + toNumber(e.liters), 0);
@@ -112,20 +121,18 @@ export const vehicleRouter = createTRPCRouter({
         }
       }
 
-      const lastRefuel = refuelsWithKm.at(-1);
-
       return {
         totalExpenses: Math.round(totalExpenses * 100) / 100,
         totalFuel: Math.round(totalFuel * 100) / 100,
         totalCost: Math.round(totalCost * 100) / 100,
         totalKm,
-        currentKm: lastKm,
+        currentKm: lastKmInMonth,
         costPerKm,
         avgConsumption,
         totalLiters: Math.round(totalLiters * 100) / 100,
         refuelCount: refuels.length,
         expenseCount: expenses.filter((e) => e.liters === null).length,
-        lastRefuelDate: lastRefuel?.date ?? null,
+        lastRefuelDate: refuelsWithKm.at(-1)?.date ?? null,
       };
     }),
 

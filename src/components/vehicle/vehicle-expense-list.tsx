@@ -9,13 +9,17 @@ import { EmptyState } from "~/components/ui/empty-state";
 
 interface VehicleExpenseListProps {
   vehicleId: string;
+  month: number;
+  year: number;
 }
 
-export function VehicleExpenseList({ vehicleId }: VehicleExpenseListProps) {
+export function VehicleExpenseList({ vehicleId, month, year }: VehicleExpenseListProps) {
   const { data, isLoading } = api.expense.getAll.useQuery({
     page: 1,
     limit: 10,
     vehicleId,
+    month,
+    year,
   });
 
   if (isLoading) {
