@@ -100,7 +100,7 @@ export const vehicleRouter = createTRPCRouter({
       const refuelsWithKm = refuels.filter((e) => e.kmAtRefuel !== null);
       const firstKmInMonth = refuelsWithKm[0]?.kmAtRefuel ?? null;
       const lastKmInMonth = refuelsWithKm.at(-1)?.kmAtRefuel ?? null;
-      const totalKm = firstKmInMonth && lastKmInMonth
+      const totalKm = firstKmInMonth !== null && lastKmInMonth !== null
         ? lastKmInMonth - firstKmInMonth
         : null;
 
@@ -113,11 +113,11 @@ export const vehicleRouter = createTRPCRouter({
       const fullTankRefuels = refuelsWithKm.filter((e) => e.fullTank);
       let avgConsumption: number | null = null;
       if (fullTankRefuels.length >= 2) {
-        const first = fullTankRefuels[0]!.kmAtRefuel!;
-        const last = fullTankRefuels.at(-1)!.kmAtRefuel!;
-        const kmDriven = last - first;
-        const litersUsed = fullTankRefuels
-          .slice(1)
+        const firstFullTankKm = fullTankRefuels[0]!.kmAtRefuel!;
+        const lastFullTankKm = fullTankRefuels.at(-1)!.kmAtRefuel!;
+        const kmDriven = lastFullTankKm - firstFullTankKm;
+        const litersUsed = refuelsWithKm
+          .filter((e) => e.kmAtRefuel! > firstFullTankKm && e.kmAtRefuel! <= lastFullTankKm)
           .reduce((sum, e) => sum + toNumber(e.liters), 0);
         if (kmDriven > 0 && litersUsed > 0) {
           avgConsumption = Math.round((litersUsed / kmDriven) * 10000) / 100;
@@ -257,7 +257,7 @@ export const vehicleRouter = createTRPCRouter({
   markServiceDone: protectedProcedure
     .input(z.object({
       vehicleId: z.string().cuid(),
-      kmAtService: z.number().int().positive(),
+      kmAtService: z.number().int().min(0),
       date: z.date().optional(),
     }))
     .mutation(async ({ ctx, input }) => {

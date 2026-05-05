@@ -22,6 +22,7 @@ export function createMockDb() {
     expense: {
       findMany: vi.fn(),
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
@@ -62,6 +63,21 @@ export function createMockDb() {
       findUnique: vi.fn(),
       create: vi.fn(),
       delete: vi.fn(),
+    },
+    vehicle: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
+    vehicleRefuel: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      delete: vi.fn(),
+      count: vi.fn(),
     },
     $transaction: vi.fn(),
   };

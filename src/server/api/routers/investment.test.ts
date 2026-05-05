@@ -40,7 +40,13 @@ const mockInvestment = {
   currentPrice: { toNumber: () => 110 },
   currentPriceUpdatedAt: new Date(),
   manualPrice: null,
+  currentQty: { toNumber: () => 10 },
+  costBasis: { toNumber: () => 1005 },
+  realizedPnL: { toNumber: () => 0 },
+  totalDividends: { toNumber: () => 0 },
+  totalFees: { toNumber: () => 5 },
   userId: mockUser.id,
+  _count: { transactions: 1 },
   createdAt: new Date(),
   updatedAt: new Date(),
   transactions: [mockBuyTx],
@@ -261,6 +267,7 @@ describe("investmentRouter.addTransaction", () => {
     const { caller, db } = makeCaller();
     db.investment.findUnique.mockResolvedValue(mockInvestment);
     db.investmentTransaction.create.mockResolvedValue({ ...mockBuyTx, id: "clvq9n8k0000308l42u7m1v5c" });
+    db.investmentTransaction.findMany.mockResolvedValue([mockBuyTx]);
 
     await caller.addTransaction({
       investmentId: "clvq9n8k0000008l42u7m1v5c",
@@ -330,6 +337,7 @@ describe("investmentRouter.deleteTransaction", () => {
     const { caller, db } = makeCaller();
     db.investmentTransaction.findUnique.mockResolvedValue(mockBuyTx);
     db.investmentTransaction.delete.mockResolvedValue(mockBuyTx);
+    db.investmentTransaction.findMany.mockResolvedValue([]);
 
     await caller.deleteTransaction({ id: "clvq9n8k0000108l42u7m1v5c" });
 
@@ -401,6 +409,8 @@ describe("investmentRouter.getSummary", () => {
       type: "gold",
       currentPrice: null,
       manualPrice: { toNumber: () => 60 },
+      currentQty: { toNumber: () => 5 },
+      costBasis: { toNumber: () => 280 },
       transactions: [
         {
           type: "buy",
@@ -410,6 +420,7 @@ describe("investmentRouter.getSummary", () => {
           date: new Date("2025-01-01"),
         },
       ],
+      _count: { transactions: 1 },
     };
 
     db.investment.findMany.mockResolvedValue([inv1, inv2]);

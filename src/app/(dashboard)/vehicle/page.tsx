@@ -18,6 +18,7 @@ import { VehicleExpenseList } from "~/components/vehicle/vehicle-expense-list";
 import { VehicleConsumptionChart } from "~/components/vehicle/vehicle-consumption-chart";
 import { VehicleExportButton } from "~/components/vehicle/vehicle-export-button";
 import { VehicleServiceAlert } from "~/components/vehicle/vehicle-service-alert";
+import { VehicleFuelPriceChart } from "~/components/vehicle/vehicle-fuel-price-chart";
 import { MonthFilterControl } from "~/components/dashboard/month-filter";
 import { ChartErrorBoundary } from "~/components/ui/chart-error-boundary";
 import { useMonthFilter } from "~/hooks/use-month-filter";
@@ -156,14 +157,21 @@ export default function VehiclePage() {
           year={filter.year}
         />
 
-        {/* Grafico mensile */}
-        <ChartErrorBoundary title="Costi mensili">
-          <VehicleMonthlyChart vehicleId={vehicle.id} />
+        {/* Prima riga — costi + consumi */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <ChartErrorBoundary title="Costi mensili">
+            <VehicleMonthlyChart vehicleId={vehicle.id} />
+          </ChartErrorBoundary>
+          <ChartErrorBoundary title="Consumo nel tempo">
+            <VehicleConsumptionChart vehicleId={vehicle.id} />
+          </ChartErrorBoundary>
+        </div>
+
+        {/* Seconda riga — prezzi carburante a larghezza piena */}
+        <ChartErrorBoundary title="Storico prezzi carburante">
+          <VehicleFuelPriceChart vehicleId={vehicle.id} />
         </ChartErrorBoundary>
 
-        <ChartErrorBoundary title="Consumo nel tempo">
-          <VehicleConsumptionChart vehicleId={vehicle.id} />
-        </ChartErrorBoundary>
         {/* Tab rifornimenti / spese — filtrati per mese */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">

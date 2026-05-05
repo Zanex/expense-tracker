@@ -59,7 +59,7 @@ export function UpcomingRecurring({ month, year }: UpcomingRecurringProps) {
           <div className="flex flex-col divide-y">
             {data!.map((item) => (
               <div
-                key={item.templateId}
+                key={`${item.templateId}-${item.expectedDate.getTime()}`}
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 transition-colors",
                   item.alreadyCreated && "opacity-50"
