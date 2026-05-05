@@ -13,6 +13,9 @@ const vehicleCreateSchema = z.object({
   year: z.number().int().min(1900).max(2100).optional(),
   fuelType: z.enum(["gasoline", "diesel", "electric", "hybrid"]).default("gasoline"),
   initialKm: z.number().int().min(0).default(0),
+  lastServiceKm: z.number().int().min(0).optional().nullable(),
+  serviceIntervalKm: z.number().int().min(1000).optional().nullable(),
+  lastServiceDate: z.date().optional().nullable(),
 });
 
 // ─── Router ───────────────────────────────────────────────
@@ -187,7 +190,96 @@ export const vehicleRouter = createTRPCRouter({
         };
       });
     }),
-  
+
+  // KPI stato manutenzione
+  getServiceStatus: protectedProcedure
+    .input(z.object({ vehicleId: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const vehicle = await ctx.db.vehicle.findUnique({
+        where: { id: input.vehicleId, userId },
+        select: {
+          lastServiceKm: true,
+          serviceIntervalKm: true,
+          lastServiceDate: true,
+          initialKm: true,
+        },
+      });
+
+      if (!vehicle) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Veicolo non trovato" });
+      }
+
+      // Se non configurato, non mostrare nulla
+      if (!vehicle.lastServiceKm || !vehicle.serviceIntervalKm) {
+        return { configured: false } as const;
+      }
+
+      // Prende km attuali dall'ultimo rifornimento registrato
+      const lastRefuel = await ctx.db.expense.findFirst({
+        where: { userId, vehicleId: input.vehicleId, kmAtRefuel: { not: null } },
+        orderBy: { kmAtRefuel: "desc" },
+        select: { kmAtRefuel: true },
+      });
+
+      const currentKm = lastRefuel?.kmAtRefuel ?? vehicle.initialKm;
+      const nextServiceKm = vehicle.lastServiceKm + vehicle.serviceIntervalKm;
+      const kmToService = nextServiceKm - currentKm;
+      const kmSinceService = currentKm - vehicle.lastServiceKm;
+      const percentage = Math.min(
+        Math.round((kmSinceService / vehicle.serviceIntervalKm) * 100),
+        100
+      );
+
+      // Soglie alert
+      const isOverdue = kmToService <= 0;
+      const isWarning = !isOverdue && kmToService <= 1500;
+      const isOk = !isOverdue && !isWarning;
+
+      return {
+        configured: true,
+        currentKm,
+        lastServiceKm: vehicle.lastServiceKm,
+        lastServiceDate: vehicle.lastServiceDate,
+        nextServiceKm,
+        kmToService,
+        kmSinceService,
+        percentage,
+        isOverdue,
+        isWarning,
+        isOk,
+        serviceIntervalKm: vehicle.serviceIntervalKm,
+      } as const;
+    }),
+
+  // Segna tagliando effettuato
+  markServiceDone: protectedProcedure
+    .input(z.object({
+      vehicleId: z.string().cuid(),
+      kmAtService: z.number().int().positive(),
+      date: z.date().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const vehicle = await ctx.db.vehicle.findUnique({
+        where: { id: input.vehicleId, userId },
+      });
+
+      if (!vehicle) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Veicolo non trovato" });
+      }
+
+      return ctx.db.vehicle.update({
+        where: { id: input.vehicleId, userId },
+        data: {
+          lastServiceKm: input.kmAtService,
+          lastServiceDate: input.date ?? new Date(),
+        },
+      });
+    }),
+
   // CRUD veicolo
   create: protectedProcedure
     .input(vehicleCreateSchema)

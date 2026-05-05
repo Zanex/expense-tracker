@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api } from "~/trpc/react";
 import { toast } from "sonner";
 import { Plus, Receipt, Pencil, Trash2, Upload, RefreshCw } from "lucide-react";
@@ -8,30 +8,9 @@ import { formatCurrency, formatDate, getCurrentMonth, getCurrentYear, toNumber }
 import { useDebounce } from "~/hooks/use-debounce";
 import { ImportDialog } from "./import-dialog";
 import { Button } from "~/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "~/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "~/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "~/components/ui/alert-dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Badge } from "~/components/ui/badge";
 import { Skeleton } from "~/components/ui/skeleton";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -42,16 +21,25 @@ import { cn } from "~/lib/utils";
 
 // ─── Component ───────────────────────────────────────────
 
-export function ExpenseList() {
+export function ExpenseList({ month, year }: { month?: number; year?: number }) {
   const [filters, setFilters] = useState<Filters>({
-    month: getCurrentMonth(),
-    year: getCurrentYear(),
+    month: month ?? getCurrentMonth(),
+    year: year ?? getCurrentYear(),
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+
+  // Sync filters when month/year props change (from global MonthFilterControl)
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      month: month ?? prev.month,
+      year: year ?? prev.year,
+    }));
+  }, [month, year]);
 
   const debouncedSearch = useDebounce(filters.search, 300);
 
@@ -131,7 +119,7 @@ export function ExpenseList() {
   return (
     <>
       <div className="flex flex-col gap-4">
-        {/* Filtri + bottoni */}
+        {/* Filters and actions */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <ExpenseFilters filters={filters} onChange={handleFiltersChange} />
           <div className="flex items-center gap-2">
@@ -146,13 +134,13 @@ export function ExpenseList() {
           </div>
         </div>
 
-        {/* Tabella o empty state */}
+        {/* Table or empty */}
         {expenses.length === 0 ? (
           <EmptyState
             icon={Receipt}
             title="Nessuna spesa"
             description={
-              filters.month ?? filters.year ?? filters.categoryId ?? filters.search ?? filters.amountMin ?? filters.amountMax
+              filters.month || filters.year || filters.categoryId || filters.search || filters.amountMin || filters.amountMax
                 ? "Nessuna spesa trovata con i filtri selezionati."
                 : "Aggiungi la tua prima spesa per iniziare."
             }
@@ -175,21 +163,16 @@ export function ExpenseList() {
                   </TableHeader>
                   <TableBody>
                     {expenses.map((expense) => {
-                      // È un'istanza generata da una ricorrenza
                       const isRecurringInstance = !!expense.recurringParentId;
-                      // È il template originale ricorrente
                       const isRecurringTemplate = expense.isRecurring && !expense.recurringParentId;
-
                       return (
                         <TableRow key={expense.id} className="group">
                           <TableCell className="text-sm text-muted-foreground">
                             {formatDate(expense.date)}
                           </TableCell>
-
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <span className="font-medium">{expense.description}</span>
-                              {/* Badge ricorrente */}
                               {(isRecurringInstance || isRecurringTemplate) && (
                                 <span
                                   className={cn(
@@ -198,11 +181,7 @@ export function ExpenseList() {
                                       ? "bg-primary/10 text-primary"
                                       : "bg-muted text-muted-foreground"
                                   )}
-                                  title={
-                                    isRecurringTemplate
-                                      ? "Template ricorrente"
-                                      : "Generata da ricorrenza"
-                                  }
+                                  title={isRecurringTemplate ? "Template ricorrente" : "Generata da ricorrenza"}
                                 >
                                   <RefreshCw className="h-2.5 w-2.5" />
                                   {isRecurringTemplate ? "ricorrente" : "auto"}
@@ -210,7 +189,6 @@ export function ExpenseList() {
                               )}
                             </div>
                           </TableCell>
-
                           <TableCell>
                             <Badge
                               variant="secondary"
@@ -222,18 +200,12 @@ export function ExpenseList() {
                               {expense.category.icon ?? "📁"} {expense.category.name}
                             </Badge>
                           </TableCell>
-
                           <TableCell className="text-right font-semibold tabular-nums">
                             {formatCurrency(toNumber(expense.amount))}
                           </TableCell>
-
                           <TableCell>
                             <div className="flex items-center justify-end gap-1 transition-opacity md:opacity-0 md:group-hover:opacity-100">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleOpenEdit(expense.id)}
-                              >
+                              <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(expense.id)}>
                                 <Pencil className="h-4 w-4" />
                               </Button>
                               <Button
@@ -258,7 +230,6 @@ export function ExpenseList() {
                 {expenses.map((expense) => {
                   const isRecurringInstance = !!expense.recurringParentId;
                   const isRecurringTemplate = expense.isRecurring && !expense.recurringParentId;
-
                   return (
                     <div key={expense.id} className="flex items-start justify-between p-4">
                       <div className="flex flex-col gap-1.5">
@@ -283,9 +254,7 @@ export function ExpenseList() {
                           >
                             {expense.category.icon ?? "📁"} {expense.category.name}
                           </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDate(expense.date)}
-                          </span>
+                          <span className="text-xs text-muted-foreground">{formatDate(expense.date)}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -293,12 +262,7 @@ export function ExpenseList() {
                           {formatCurrency(toNumber(expense.amount))}
                         </span>
                         <div className="flex gap-0.5">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleOpenEdit(expense.id)}
-                          >
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(expense.id)}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
                           <Button
@@ -317,7 +281,7 @@ export function ExpenseList() {
               </div>
             </div>
 
-            {/* Paginazione */}
+            {/* Pagination */}
             {pagination && (
               <Pagination
                 currentPage={pagination.currentPage}
@@ -335,9 +299,7 @@ export function ExpenseList() {
       <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {editingId ? "Modifica spesa" : "Aggiungi spesa"}
-            </DialogTitle>
+            <DialogTitle>{editingId ? "Modifica spesa" : "Aggiungi spesa"}</DialogTitle>
           </DialogHeader>
           {editingId && !editingExpense ? (
             <div className="flex flex-col gap-4 py-4">
@@ -351,17 +313,12 @@ export function ExpenseList() {
         </DialogContent>
       </Dialog>
 
-      {/* Alert dialog elimina */}
-      <AlertDialog
-        open={!!deletingId}
-        onOpenChange={(open) => !open && setDeletingId(null)}
-      >
+      {/* Alert dialog delete */}
+      <AlertDialog open={!!deletingId} onOpenChange={(open) => !open && setDeletingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminare la spesa?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Questa azione non è reversibile.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Questa azione non è reversibile.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annulla</AlertDialogCancel>

@@ -18,7 +18,7 @@ export default function ExpensesPage() {
         </div>
         <MonthFilterControl filter={filter} />
       </div>
-      <ExpenseListWithTabs />
+      <ExpenseListWithTabs month={filter.month} year={filter.year} />
     </div>
   );
 }

@@ -194,5 +194,9 @@ model Vehicle {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
+  lastServiceKm     Int?       // km all'ultimo tagliando
+  serviceIntervalKm Int?       // ogni quanti km fare il tagliando (es. 15000)
+  lastServiceDate   DateTime?  // data ultimo tagliando
+  
   @@index([userId])
 }

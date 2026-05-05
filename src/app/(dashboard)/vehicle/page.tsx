@@ -17,6 +17,7 @@ import { RefuelList } from "~/components/vehicle/refuel-list";
 import { VehicleExpenseList } from "~/components/vehicle/vehicle-expense-list";
 import { VehicleConsumptionChart } from "~/components/vehicle/vehicle-consumption-chart";
 import { VehicleExportButton } from "~/components/vehicle/vehicle-export-button";
+import { VehicleServiceAlert } from "~/components/vehicle/vehicle-service-alert";
 import { MonthFilterControl } from "~/components/dashboard/month-filter";
 import { ChartErrorBoundary } from "~/components/ui/chart-error-boundary";
 import { useMonthFilter } from "~/hooks/use-month-filter";
@@ -144,6 +145,9 @@ export default function VehiclePage() {
             </div>
           </div>
         </div>
+
+        {/* Alert manutenzione — appare solo se configurato e necessario */}
+        <VehicleServiceAlert vehicleId={vehicle.id} />
 
         {/* KPI Grid — filtrati per mese */}
         <VehicleKpiGrid

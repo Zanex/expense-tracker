@@ -13,7 +13,7 @@ type Tab = "all" | "recurring";
 
 // ─── Component ───────────────────────────────────────────
 
-export function ExpenseListWithTabs() {
+export function ExpenseListWithTabs({ month, year }: { month?: number; year?: number }) {
   const [activeTab, setActiveTab] = useState<Tab>("all");
 
   // Conta le ricorrenze attive per il badge
@@ -40,7 +40,7 @@ export function ExpenseListWithTabs() {
       </div>
 
       {/* Content */}
-      {activeTab === "all" ? <ExpenseList /> : <RecurringExpenseList />}
+      {activeTab === "all" ? <ExpenseList month={month} year={year} /> : <RecurringExpenseList />}
     </div>
   );
 }

@@ -43,6 +43,7 @@ export function ExpenseFilters({ filters, onChange }: ExpenseFiltersProps) {
 
   function handleReset() {
     onChange({
+      ...filters,
       categoryId: undefined,
       search: undefined,
       amountMin: undefined,
