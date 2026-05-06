@@ -168,3 +168,29 @@
 .animate-stagger > *:nth-child(3) { animation-delay: 0.3s; }
 .animate-stagger > *:nth-child(4) { animation-delay: 0.4s; }
 .animate-stagger > *:nth-child(5) { animation-delay: 0.5s; }
+
+/* ─── Epic Theme Transition ────────────────────────────── */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 9999;
+}
+
+@keyframes reveal-dark {
+  from { clip-path: circle(0% at var(--x) var(--y)); }
+  to { clip-path: circle(100% at var(--x) var(--y)); }
+}
+
+@keyframes reveal-light {
+  from { clip-path: circle(100% at var(--x) var(--y)); }
+  to { clip-path: circle(0% at var(--x) var(--y)); }
+}
