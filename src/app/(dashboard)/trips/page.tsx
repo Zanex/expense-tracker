@@ -9,7 +9,7 @@ export default function TripsPage() {
   const [createOpen, setCreateOpen] = useState(false);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8 animate-stagger">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Viaggi</h1>

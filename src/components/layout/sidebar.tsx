@@ -39,8 +39,10 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <>
-      <div className="mb-6 px-3 py-2">
-        <h1 className="text-lg font-bold tracking-tight">💰 Expense Tracker</h1>
+      <div className="mb-6 px-4 py-2">
+        <h1 className="text-xl font-bold tracking-tight text-gradient">
+          💰 Expense Tracker
+        </h1>
       </div>
       <nav className="flex flex-1 flex-col gap-1">
         {navItems.map(({ href, label, icon: Icon }) => {
@@ -55,13 +57,19 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
               onClick={onNavigate}
               onMouseEnter={() => router.prefetch(href)}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300",
                 isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  ? "bg-primary/10 text-primary shadow-[inset_0_0_20px_rgba(var(--primary),0.05)]"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground hover:translate-x-1"
               )}
             >
-              <Icon className="h-4 w-4" />
+              {isActive && (
+                <div className="absolute left-0 h-5 w-1 rounded-r-full bg-primary" />
+              )}
+              <Icon className={cn(
+                "h-4 w-4 transition-transform duration-300 group-hover:scale-110",
+                isActive ? "text-primary" : "text-muted-foreground"
+              )} />
               {label}
             </Link>
           );
@@ -84,7 +92,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden h-screen w-60 flex-col border-r bg-background px-3 py-4 md:flex">
+      <aside className="glass hidden h-screen w-64 flex-col px-3 py-6 md:flex">
         <NavContent />
       </aside>
 
@@ -95,7 +103,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             className="fixed inset-0 z-40 bg-black/40 md:hidden"
             onClick={onMobileClose}
           />
-          <aside className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r bg-background px-3 py-4 shadow-xl md:hidden">
+          <aside className="glass fixed inset-y-0 left-0 z-50 flex w-72 flex-col px-3 py-6 shadow-2xl md:hidden">
             <button
               onClick={onMobileClose}
               className="absolute right-3 top-3 rounded-lg p-1.5 text-muted-foreground hover:bg-accent"

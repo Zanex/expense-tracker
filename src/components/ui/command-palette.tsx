@@ -148,7 +148,7 @@ export function CommandPalette() {
       />
 
       {/* Palette */}
-      <div className="fixed left-1/2 top-[20%] z-50 w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-xl border bg-background shadow-2xl">
+      <div className="glass fixed left-1/2 top-[20%] z-50 w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-3xl shadow-2xl animate-in fade-in zoom-in duration-300">
         {/* Input */}
         <div className="flex items-center gap-3 border-b px-4 py-3">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -158,7 +158,7 @@ export function CommandPalette() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Cerca spese, categorie..."
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
           />
           {query && (
             <button onClick={() => setQuery("")}>
@@ -308,11 +308,11 @@ export function CommandPaletteTrigger() {
   return (
     <button
       onClick={handleClick}
-      className="hidden items-center gap-2 rounded-lg border bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted md:flex"
+      className="hidden items-center gap-2 rounded-xl border border-white/10 bg-background/20 backdrop-blur-md px-4 py-2 text-sm text-muted-foreground transition-all duration-300 hover:bg-background/40 hover:border-white/20 md:flex shadow-sm"
     >
-      <Search className="h-3.5 w-3.5" />
-      <span>Cerca...</span>
-      <kbd className="ml-2 rounded border bg-background px-1.5 py-0.5 text-xs">
+      <Search className="h-4 w-4 shrink-0" />
+      <span>Cerca ovunque...</span>
+      <kbd className="ml-4 rounded-lg border border-white/10 bg-background/50 px-2 py-0.5 text-[10px] font-bold">
         ⌘K
       </kbd>
     </button>

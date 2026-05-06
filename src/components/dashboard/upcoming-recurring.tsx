@@ -34,7 +34,7 @@ export function UpcomingRecurring({ month, year }: UpcomingRecurringProps) {
   if (!isLoading && (!data || data.length === 0)) return null;
 
   return (
-    <Card>
+    <Card className="glass-card overflow-hidden">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
           <RefreshCw className="h-4 w-4" />
@@ -61,8 +61,8 @@ export function UpcomingRecurring({ month, year }: UpcomingRecurringProps) {
               <div
                 key={`${item.templateId}-${item.expectedDate.getTime()}`}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 transition-colors",
-                  item.alreadyCreated && "opacity-50"
+                  "flex items-center gap-3 px-4 py-3.5 transition-all duration-300 hover:bg-white/5",
+                  item.alreadyCreated && "opacity-50 grayscale-[0.5]"
                 )}
               >
                 {/* Icona categoria */}
@@ -116,11 +116,11 @@ export function UpcomingRecurring({ month, year }: UpcomingRecurringProps) {
 
         {/* Totale atteso */}
         {data && data.length > 0 && (
-          <div className="flex items-center justify-between border-t bg-muted/30 px-4 py-2.5">
-            <span className="text-xs text-muted-foreground">
+          <div className="flex items-center justify-between border-t border-white/5 bg-primary/5 px-4 py-3">
+            <span className="text-xs font-semibold uppercase tracking-wider text-primary/70">
               Totale atteso
             </span>
-            <span className="text-sm font-bold tabular-nums">
+            <span className="text-base font-bold tabular-nums text-gradient">
               {formatCurrency(
                 data
                   .filter((d) => !d.alreadyCreated)

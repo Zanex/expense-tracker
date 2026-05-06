@@ -27,13 +27,13 @@ export function KpiCard({
   isLoading = false,
 }: KpiCardProps) {
   return (
-    <Card>
+    <Card className="glass-card overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+        <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">
           {title}
         </CardTitle>
         {Icon && (
-          <div className="rounded-full bg-primary/10 p-2 text-primary ring-1 ring-primary/20 shadow-[0_0_15px_rgba(var(--primary),0.2)]">
+          <div className="rounded-2xl bg-primary/10 p-2 text-primary border border-primary/20 shadow-[0_0_20px_rgba(var(--primary),0.1)] transition-transform duration-300 hover:scale-110">
             <Icon className="h-4 w-4" />
           </div>
         )}

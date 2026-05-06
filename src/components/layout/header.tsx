@@ -32,7 +32,7 @@ export function Header({ user, onMenuClick }: HeaderProps) {
     : "U";
 
   return (
-    <header className="flex h-14 items-center justify-between border-b bg-background/60 backdrop-blur-md px-4 md:px-6">
+    <header className="glass sticky top-0 z-30 flex h-16 items-center justify-between px-4 md:px-8">
       {/* Hamburger — solo mobile */}
       <Button
         variant="ghost"

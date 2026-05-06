@@ -37,7 +37,7 @@ export function InvestmentWidget() {
     : pnlPositive ? TrendingUp : TrendingDown;
 
   return (
-    <Card>
+    <Card className="glass-card overflow-hidden">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -88,32 +88,32 @@ export function InvestmentWidget() {
               {/* P&L badge */}
               <div
                 className={cn(
-                  "flex flex-col items-end gap-0.5 rounded-lg px-3 py-2",
+                  "flex flex-col items-end gap-0.5 rounded-2xl px-4 py-2.5 transition-all duration-300",
                   pnlPositive
-                    ? "bg-green-50 dark:bg-green-950/20"
-                    : "bg-red-50 dark:bg-red-950/20"
+                    ? "bg-green-500/10 border border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]"
+                    : "bg-red-500/10 border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.1)]"
                 )}
               >
-                <span className="text-xs text-muted-foreground">P&L</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Performance</span>
                 <span
                   className={cn(
-                    "flex items-center gap-1 text-sm font-bold tabular-nums",
+                    "flex items-center gap-1 text-base font-bold tabular-nums",
                     pnlPositive
                       ? "text-green-600 dark:text-green-400"
                       : "text-red-500 dark:text-red-400"
                   )}
                 >
-                  <PnLIcon className="h-3.5 w-3.5" />
-                  {pnlPositive ? "+" : ""}{formatCurrency(summary!.totalUnrealizedPnL ?? 0)}
+                  <PnLIcon className="h-4 w-4" />
+                  {pnlPositive ? "+" : ""}{formatCurrency(summary?.totalUnrealizedPnL ?? 0)}
                 </span>
-                {summary!.totalUnrealizedPct !== null && (
+                {summary?.totalUnrealizedPct !== null && (
                   <span
                     className={cn(
-                      "text-xs font-medium",
-                      pnlPositive ? "text-green-600 dark:text-green-400" : "text-red-500"
+                      "text-xs font-bold",
+                      pnlPositive ? "text-green-600/80 dark:text-green-400/80" : "text-red-500/80"
                     )}
                   >
-                    {pnlPositive ? "+" : ""}{summary!.totalUnrealizedPct}%
+                    {pnlPositive ? "+" : ""}{summary?.totalUnrealizedPct}%
                   </span>
                 )}
               </div>

@@ -33,7 +33,7 @@ export function VehicleWidget() {
     : 0;
 
   return (
-    <Card>
+    <Card className="glass-card overflow-hidden">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -66,64 +66,64 @@ export function VehicleWidget() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-3 divide-x">
-
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Costo mese corrente */}
-            <div className="flex flex-col gap-1 pr-4">
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Fuel className="h-3 w-3" />
+            <div className="flex flex-col gap-2 p-4 rounded-2xl bg-primary/5 border border-primary/10">
+              <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary/70">
+                <Fuel className="h-3.5 w-3.5" />
                 Questo mese
               </span>
-              <span className="text-xl font-bold tabular-nums">
+              <span className="text-3xl font-bold tabular-nums text-gradient">
                 {formatCurrency(monthTotal)}
               </span>
-              <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-                {currentMonth && currentMonth.fuel > 0 && (
-                  <span>⛽ {formatCurrency(currentMonth.fuel)}</span>
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-1">
+                {currentMonth?.fuel !== undefined && currentMonth.fuel > 0 && (
+                  <span className="px-2 py-1 rounded-full bg-background/50 border border-white/10">⛽ {formatCurrency(currentMonth.fuel)}</span>
                 )}
-                {currentMonth && currentMonth.expenses > 0 && (
-                  <span>🔧 {formatCurrency(currentMonth.expenses)}</span>
-                )}
-                {monthTotal === 0 && (
-                  <span>Nessuna spesa</span>
+                {currentMonth?.expenses !== undefined && currentMonth.expenses > 0 && (
+                  <span className="px-2 py-1 rounded-full bg-background/50 border border-white/10">🔧 {formatCurrency(currentMonth.expenses)}</span>
                 )}
               </div>
             </div>
 
             {/* Km percorsi totali */}
-            <div className="flex flex-col gap-1 px-4">
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Gauge className="h-3 w-3" />
+            <div className="flex flex-col gap-2 p-4 rounded-2xl bg-secondary/5 border border-secondary/10">
+              <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Gauge className="h-3.5 w-3.5" />
                 Km attuali
               </span>
-              <span className="text-xl font-bold tabular-nums">
+              <span className="text-2xl font-bold tabular-nums">
                 {(summary?.currentKm ?? 0).toLocaleString("it-IT")}
               </span>
-              <span className="text-xs text-muted-foreground">
-                {summary?.totalKm
+              <span className="text-xs text-muted-foreground mt-auto">
+                {summary?.totalKm != null
                   ? `+${summary.totalKm.toLocaleString("it-IT")} tracciati`
-                  : "Nessun dato"}
+                  : "In attesa di dati"}
               </span>
             </div>
 
             {/* Consumo medio */}
-            <div className="flex flex-col gap-1 pl-4">
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Droplets className="h-3 w-3" />
-                Consumo medio
+            <div className="flex flex-col gap-2 p-4 rounded-2xl bg-accent/5 border border-accent/10">
+              <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Droplets className="h-3.5 w-3.5" />
+                Efficienza
               </span>
-              <span className="text-xl font-bold tabular-nums">
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-bold tabular-nums">
+                  {summary?.avgConsumption != null
+                    ? `${summary.avgConsumption}`
+                    : "—"}
+                </span>
+                {summary?.avgConsumption != null && (
+                  <span className="text-xs text-muted-foreground font-medium">L/100km</span>
+                )}
+              </div>
+              <span className="text-xs text-muted-foreground mt-auto">
                 {summary?.avgConsumption != null
-                  ? `${summary.avgConsumption}`
-                  : "—"}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {summary?.avgConsumption != null
-                  ? "L/100km"
+                  ? "Ottimo rendimento"
                   : "Servono ≥2 pieni"}
               </span>
             </div>
-
           </div>
         )}
 

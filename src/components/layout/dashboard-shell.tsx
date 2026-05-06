@@ -24,8 +24,10 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
           user={user}
           onMenuClick={() => setMobileOpen(true)}
         />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          {children}
+        <main className="flex-1 overflow-y-auto px-4 py-8 md:px-8 lg:px-12">
+          <div className="mx-auto max-w-7xl space-y-8">
+            {children}
+          </div>
         </main>
       </div>
     </div>

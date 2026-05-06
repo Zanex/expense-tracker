@@ -92,28 +92,26 @@ export default function VehiclePage() {
 
   return (
     <>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-8 animate-stagger">
 
         {/* Header veicolo + filtro mese */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           {/* Info veicolo */}
           <div
-            className="flex flex-1 items-start gap-4 rounded-xl p-4"
-            style={{ backgroundColor: "#6366f118", border: "1.5px solid #6366f128" }}
+            className="glass flex flex-1 items-start gap-5 rounded-3xl p-6 transition-all duration-300 hover:bg-background/50"
           >
             <span
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-2xl shadow"
-              style={{ backgroundColor: "#6366f1" }}
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-3xl shadow-lg shadow-primary/20 bg-primary"
             >
               🚗
             </span>
-            <div className="flex flex-col gap-1">
-              <h1 className="text-xl font-bold" style={{ color: "#6366f1" }}>
+            <div className="flex flex-col gap-1.5">
+              <h1 className="text-2xl font-bold text-gradient">
                 {vehicle.name}
               </h1>
-              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                 {vehicle.plate && (
-                  <span className="rounded bg-muted px-2 py-0.5 font-mono text-xs uppercase">
+                  <span className="rounded-lg bg-primary/10 border border-primary/20 px-2 py-0.5 font-mono text-xs uppercase text-primary">
                     {vehicle.plate}
                   </span>
                 )}
@@ -175,16 +173,16 @@ export default function VehiclePage() {
         {/* Tab rifornimenti / spese — filtrati per mese */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <div className="flex gap-1 rounded-lg border bg-muted/30 p-1 w-fit">
+            <div className="flex gap-1 rounded-2xl border border-white/10 bg-background/20 backdrop-blur-md p-1.5 w-fit">
               {(["rifornimenti", "spese"] as Tab[]).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={cn(
-                    "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all capitalize",
+                    "flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all capitalize",
                     activeTab === tab
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                   )}
                 >
                   {tab === "rifornimenti" ? (

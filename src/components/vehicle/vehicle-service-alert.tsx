@@ -60,25 +60,27 @@ export function VehicleServiceAlert({ vehicleId }: VehicleServiceAlertProps) {
     <>
       <div
         className={cn(
-          "flex items-start gap-4 rounded-xl border px-4 py-3.5 text-sm",
+          "glass relative overflow-hidden flex items-start gap-4 rounded-3xl border px-5 py-4 text-sm transition-all duration-500",
           data.isOverdue
-            ? "border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20"
-            : "border-orange-200 bg-orange-50 dark:border-orange-900/50 dark:bg-orange-950/20"
+            ? "border-red-500/30 bg-red-500/5 shadow-[0_0_20px_rgba(239,68,68,0.1)]"
+            : "border-orange-500/30 bg-orange-500/5 shadow-[0_0_20px_rgba(249,115,22,0.1)]"
         )}
       >
+        {/* Shine effect */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
         {/* Icona */}
         <div
           className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl shadow-lg transition-transform hover:scale-110",
             data.isOverdue
-              ? "bg-red-100 dark:bg-red-900/40"
-              : "bg-orange-100 dark:bg-orange-900/40"
+              ? "bg-red-500/20 text-red-500 animate-pulse"
+              : "bg-orange-500/20 text-orange-500"
           )}
         >
           {data.isOverdue ? (
-            <AlertTriangle className="h-5 w-5 text-red-500" />
+            <AlertTriangle className="h-5 w-5" />
           ) : (
-            <Wrench className="h-5 w-5 text-orange-500" />
+            <Wrench className="h-5 w-5" />
           )}
         </div>
 
@@ -114,12 +116,14 @@ export function VehicleServiceAlert({ vehicleId }: VehicleServiceAlertProps) {
           </div>
 
           {/* Barra progresso */}
-          <div className="flex flex-col gap-1">
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+          <div className="flex flex-col gap-2">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10 p-[1px]">
               <div
                 className={cn(
-                  "h-full rounded-full transition-all",
-                  data.isOverdue ? "bg-red-500" : "bg-orange-400"
+                  "h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(var(--color),0.5)]",
+                  data.isOverdue 
+                    ? "bg-gradient-to-r from-red-600 to-red-400" 
+                    : "bg-gradient-to-r from-orange-500 to-yellow-400"
                 )}
                 style={{ width: `${data.percentage}%` }}
               />

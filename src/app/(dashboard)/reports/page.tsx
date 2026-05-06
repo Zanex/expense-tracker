@@ -13,7 +13,7 @@ export default function ReportsPage() {
   const currentYear = getCurrentYear();
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8 animate-stagger">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
