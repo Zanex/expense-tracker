@@ -8,7 +8,7 @@ export default function ExpensesPage() {
   const filter = useMonthFilter();
 
   return (
-    <div className="flex flex-col gap-8 animate-stagger">
+    <div className="flex flex-col gap-8 chaos-entrance">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Spese</h1>

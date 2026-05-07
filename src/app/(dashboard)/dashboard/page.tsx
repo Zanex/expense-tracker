@@ -43,7 +43,7 @@ export default function DashboardPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="flex flex-col gap-8 animate-stagger">
+    <div className="flex flex-col gap-8 chaos-entrance">
         {/* Header con filtro mese + export */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>

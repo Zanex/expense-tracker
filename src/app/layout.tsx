@@ -52,6 +52,13 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <TRPCReactProvider>
+            {/* Mesh Background Dinamico */}
+            <div className="mesh-container">
+              <div className="mesh-blob mesh-blob-1" />
+              <div className="mesh-blob mesh-blob-2" />
+              <div className="mesh-blob mesh-blob-3" />
+            </div>
+
             {children}
             <Toaster />
             <SpeedInsights />

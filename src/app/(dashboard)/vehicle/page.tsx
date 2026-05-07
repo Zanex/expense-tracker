@@ -92,7 +92,7 @@ export default function VehiclePage() {
 
   return (
     <>
-      <div className="flex flex-col gap-8 animate-stagger">
+      <div className="flex flex-col gap-8 chaos-entrance">
 
         {/* Header veicolo + filtro mese */}
         <div className="flex flex-wrap items-start justify-between gap-4">

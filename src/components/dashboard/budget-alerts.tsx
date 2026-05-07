@@ -37,10 +37,8 @@ export function BudgetAlerts({ month, year }: BudgetAlertsProps) {
           <div
             key={alert.id}
             className={cn(
-              "flex items-center gap-3 rounded-lg border px-4 py-3 text-sm",
-              isOver
-                ? "border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30"
-                : "border-orange-200 bg-orange-50 dark:border-orange-900/50 dark:bg-orange-950/30"
+              "glass-card flex items-center gap-3 px-4 py-3 text-sm",
+              isOver ? "aura-destructive" : "aura-warning"
             )}
           >
             {/* Icona */}

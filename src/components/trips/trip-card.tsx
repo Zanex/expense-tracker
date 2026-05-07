@@ -77,7 +77,10 @@ export function TripCard({ trip, onEdit }: TripCardProps) {
   const statusCfg = STATUS_CONFIG[trip.status];
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md">
+    <div className={cn(
+      "glass-card group relative flex flex-col overflow-hidden",
+      overBudget && "aura-destructive"
+    )}>
       {/* Header colorato */}
       <div
         className="relative flex items-center justify-between px-4 py-3"

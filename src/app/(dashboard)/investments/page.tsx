@@ -11,7 +11,7 @@ export default function InvestmentsPage() {
   const [importOpen, setImportOpen] = useState(false);
 
   return (
-    <div className="flex flex-col gap-8 animate-stagger">
+    <div className="flex flex-col gap-8 chaos-entrance">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Investimenti</h1>

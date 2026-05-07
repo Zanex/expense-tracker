@@ -148,7 +148,7 @@ export function ExpenseList({ month, year }: { month?: number; year?: number }) 
           />
         ) : (
           <>
-            <div className="rounded-lg border bg-card">
+            <div className="glass-card">
               {/* Desktop */}
               <div className="hidden md:block">
                 <Table>

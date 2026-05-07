@@ -80,14 +80,14 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   }
 
   return (
-    <div className="flex flex-col gap-6 rounded-xl border bg-card p-6 shadow-sm">
+    <div className="glass-card aura-primary flex flex-col gap-6 p-8">
       {/* Header */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <div className="rounded-full bg-primary/10 p-2">
+          <div className="rounded-full bg-primary/20 p-2 aura-primary">
             <Sparkles className="h-5 w-5 text-primary" />
           </div>
-          <h2 className="text-lg font-bold">Benvenuto in Expense Tracker!</h2>
+          <h2 className="text-xl font-bold text-gradient">Benvenuto in Expense Tracker!</h2>
         </div>
         <p className="text-sm text-muted-foreground">
           Inizia scegliendo le categorie che usi di più. Potrai aggiungerne
@@ -105,16 +105,17 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
               type="button"
               onClick={() => toggle(cat.name)}
               className={cn(
-                "relative flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-sm font-medium transition-all hover:scale-[1.02]",
+                "relative flex flex-col items-center gap-2 rounded-2xl border-2 p-4 text-sm font-medium transition-all tactile-press",
                 isSelected
-                  ? "border-transparent shadow-md"
-                  : "border-border bg-background hover:border-muted-foreground/30"
+                  ? "border-transparent shadow-lg scale-[1.02]"
+                  : "border-white/5 bg-background/20 hover:border-white/20"
               )}
               style={
                 isSelected
                   ? {
-                      backgroundColor: `${cat.color}18`,
+                      backgroundColor: `${cat.color}25`,
                       borderColor: cat.color,
+                      boxShadow: `0 0 20px -5px ${cat.color}40`,
                     }
                   : undefined
               }

@@ -9,7 +9,7 @@ export default function CategoriesPage() {
   const [createOpen, setCreateOpen] = useState(false);
 
   return (
-    <div className="flex flex-col gap-8 animate-stagger">
+    <div className="flex flex-col gap-8 chaos-entrance">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Categorie</h1>

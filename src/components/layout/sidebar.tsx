@@ -57,10 +57,10 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
               onClick={onNavigate}
               onMouseEnter={() => router.prefetch(href)}
               className={cn(
-                "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300",
+                "group relative flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-300 tactile-press",
                 isActive
-                  ? "bg-primary/10 text-primary shadow-[inset_0_0_20px_rgba(var(--primary),0.05)]"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground hover:translate-x-1"
+                  ? "bg-primary/15 text-primary shadow-[0_0_20px_rgba(var(--primary),0.1)] aura-primary"
+                  : "text-muted-foreground hover:bg-white/10 hover:text-foreground hover:translate-x-1"
               )}
             >
               {isActive && (
@@ -92,7 +92,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="glass hidden h-screen w-64 flex-col px-3 py-6 md:flex">
+      <aside className="glass-sidebar sticky top-0 hidden h-screen w-72 flex-col px-4 py-8 md:flex">
         <NavContent />
       </aside>
 
@@ -103,7 +103,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             className="fixed inset-0 z-40 bg-black/40 md:hidden"
             onClick={onMobileClose}
           />
-          <aside className="glass fixed inset-y-0 left-0 z-50 flex w-72 flex-col px-3 py-6 shadow-2xl md:hidden">
+          <aside className="glass-sidebar fixed inset-y-0 left-0 z-50 flex w-72 flex-col px-4 py-8 shadow-2xl md:hidden">
             <button
               onClick={onMobileClose}
               className="absolute right-3 top-3 rounded-lg p-1.5 text-muted-foreground hover:bg-accent"
