@@ -191,6 +191,41 @@
   border-color: oklch(0.585 0.233 277.117 / 0.2) !important;
 }
 
+/* ─── Tactile UI Physics ───────────────────────────────── */
+
+@utility tactile-press {
+  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1);
+  &:active {
+    transform: scale(0.96) translateY(1px);
+  }
+}
+
+@utility tactile-lift {
+  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.25s ease;
+  &:hover {
+    transform: translateY(-2px);
+  }
+  &:active {
+    transform: translateY(1px) scale(0.98);
+  }
+}
+
+@layer base {
+  button, 
+  [role="button"],
+  .glass-card {
+    @apply tactile-press;
+  }
+  
+  .glass-card {
+    @apply transition-all duration-300 ease-out;
+  }
+  
+  .glass-card:hover {
+    @apply -translate-y-1 shadow-2xl border-white/20;
+  }
+}
+
 /* ─── Epic Theme Transition ────────────────────────────── */
 
 ::view-transition-old(root),
