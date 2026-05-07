@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   BarChart,
   Bar,
@@ -41,9 +42,9 @@ function CustomTooltip({
   if (value === undefined) return null;
 
   return (
-    <div className="rounded-lg border bg-popover px-3 py-2 shadow-md outline-hidden">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm font-medium text-popover-foreground">
+    <div className="glass rounded-xl border border-white/10 bg-background/40 px-4 py-3 shadow-2xl backdrop-blur-xl outline-none">
+      <p className="text-xs text-muted-foreground/80 font-medium uppercase tracking-wider">{label}</p>
+      <p className="text-lg font-bold text-primary drop-shadow-[0_0_10px_rgba(var(--primary),0.5)] mt-1">
         {formatCurrency(value)}
       </p>
     </div>
@@ -78,9 +79,19 @@ export function MonthlyTrend({ month, year, months = 6 }: MonthlyTrendProps) {
             description="Nessuna spesa registrata nel periodo selezionato."
           />
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data} barSize={32}>
-              <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" opacity={0.5} />
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={data} barSize={36} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="barGradientActive" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--primary)" stopOpacity={1} />
+                  <stop offset="100%" stopColor="var(--primary)" stopOpacity={0.4} />
+                </linearGradient>
+                <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--muted-foreground)" stopOpacity={0.4} />
+                  <stop offset="100%" stopColor="var(--muted-foreground)" stopOpacity={0.1} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} stroke="currentColor" className="text-muted-foreground/20" strokeDasharray="4 4" />
               <XAxis
                 dataKey="label"
                 tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
@@ -100,16 +111,23 @@ export function MonthlyTrend({ month, year, months = 6 }: MonthlyTrendProps) {
                 content={<CustomTooltip />} 
                 cursor={{ fill: "var(--muted)", opacity: 0.15 }} 
               />
-              <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+              <Bar 
+                dataKey="total" 
+                radius={[6, 6, 0, 0]}
+                isAnimationActive={true}
+                animationBegin={200}
+                animationDuration={1500}
+                animationEasing="ease-out"
+              >
                 {data.map((entry, i) => (
                   <Cell
                     key={i}
-                    // Mese selezionato evidenziato, gli altri più chiari
                     fill={
                       entry.month === month && entry.year === year
-                        ? "#6366f1"
-                        : "#c7d2fe"
+                        ? "url(#barGradientActive)"
+                        : "url(#barGradient)"
                     }
+                    className="transition-all duration-300 hover:opacity-80"
                   />
                 ))}
               </Bar>

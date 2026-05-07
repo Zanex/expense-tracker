@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   LineChart,
   Line,
@@ -70,8 +71,8 @@ function CustomTooltip({
   const d = payload[0]!;
 
   return (
-    <div className="rounded-lg border bg-popover px-3 py-2.5 shadow-md outline-none text-sm">
-      <p className="mb-1.5 font-medium text-muted-foreground">{label}</p>
+    <div className="glass rounded-xl border border-white/10 bg-background/40 px-4 py-3 shadow-2xl backdrop-blur-xl outline-none text-sm">
+      <p className="mb-2 font-bold text-gradient uppercase tracking-wider text-xs">{label}</p>
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-6">
           <span className="text-muted-foreground">Prezzo/L</span>
@@ -194,12 +195,17 @@ export function VehicleFuelPriceChart({ vehicleId }: VehicleFuelPriceChartProps)
 
       <CardContent>
         <ResponsiveContainer width="100%" height={240}>
-          <LineChart data={chartData}>
+          <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <defs>
+              <filter id="priceLineGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#6366f1" floodOpacity="0.4" />
+              </filter>
+            </defs>
             <CartesianGrid
               vertical={false}
-              stroke="var(--border)"
-              strokeDasharray="3 3"
-              opacity={0.5}
+              stroke="currentColor"
+              className="text-muted-foreground/20"
+              strokeDasharray="4 4"
             />
             <XAxis
               dataKey="label"
@@ -237,9 +243,14 @@ export function VehicleFuelPriceChart({ vehicleId }: VehicleFuelPriceChartProps)
               type="monotone"
               dataKey="price"
               stroke="#6366f1"
-              strokeWidth={2.5}
+              strokeWidth={3}
               dot={{ fill: "#6366f1", r: 4, strokeWidth: 0 }}
-              activeDot={{ r: 6, strokeWidth: 0 }}
+              activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)", filter: "url(#priceLineGlow)" }}
+              style={{ filter: "url(#priceLineGlow)" }}
+              isAnimationActive={true}
+              animationBegin={200}
+              animationDuration={1500}
+              animationEasing="ease-out"
             />
           </LineChart>
         </ResponsiveContainer>

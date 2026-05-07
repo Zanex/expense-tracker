@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   BarChart,
   Bar,
@@ -42,9 +43,9 @@ function CustomTooltip({
   if (value === undefined) return null;
 
   return (
-    <div className="rounded-lg border bg-popover px-3 py-2 shadow-md outline-none">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm font-medium text-popover-foreground">
+    <div className="glass rounded-xl border border-white/10 bg-background/40 px-4 py-3 shadow-2xl backdrop-blur-xl outline-none text-sm">
+      <p className="text-xs text-muted-foreground/80 font-medium uppercase tracking-wider">{label}</p>
+      <p className="text-lg font-bold text-primary drop-shadow-[0_0_10px_rgba(var(--primary),0.5)] mt-1">
         {formatCurrency(value)}
       </p>
     </div>
@@ -97,12 +98,18 @@ export function TripSpendingTimeline({
           />
         ) : (
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={data} barSize={28}>
+            <BarChart data={data} barSize={28} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="tripBarGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={color} stopOpacity={1} />
+                  <stop offset="100%" stopColor={color} stopOpacity={0.4} />
+                </linearGradient>
+              </defs>
               <CartesianGrid
                 vertical={false}
-                stroke="var(--border)"
-                strokeDasharray="3 3"
-                opacity={0.5}
+                stroke="currentColor"
+                className="text-muted-foreground/20"
+                strokeDasharray="4 4"
               />
               <XAxis
                 dataKey="label"
@@ -141,9 +148,13 @@ export function TripSpendingTimeline({
               )}
               <Bar
                 dataKey="total"
-                fill={color}
-                radius={[4, 4, 0, 0]}
-                opacity={0.9}
+                fill="url(#tripBarGradient)"
+                radius={[6, 6, 0, 0]}
+                isAnimationActive={true}
+                animationBegin={100}
+                animationDuration={1500}
+                animationEasing="ease-out"
+                className="transition-all duration-300 hover:opacity-80"
               />
             </BarChart>
           </ResponsiveContainer>

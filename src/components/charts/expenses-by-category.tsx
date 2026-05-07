@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   PieChart,
   Pie,
@@ -42,9 +43,11 @@ function CustomTooltip({
   if (!item) return null;
 
   return (
-    <div className="rounded-lg border bg-popover px-3 py-2 shadow-md outline-hidden">
-      <p className="text-sm font-medium text-popover-foreground">{item.name}</p>
-      <p className="text-sm text-muted-foreground">{formatCurrency(item.value)}</p>
+    <div className="glass rounded-xl border border-white/10 bg-background/40 px-4 py-3 shadow-2xl backdrop-blur-xl outline-none">
+      <p className="text-sm font-bold text-gradient">{item.name}</p>
+      <p className="text-lg font-semibold text-primary drop-shadow-[0_0_10px_rgba(var(--primary),0.5)]">
+        {formatCurrency(item.value)}
+      </p>
     </div>
   );
 }
@@ -98,17 +101,26 @@ export function ExpensesByCategory({ month, year }: ExpensesByCategoryProps) {
             description="Nessuna spesa registrata per questo mese."
           />
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={320}>
             <PieChart>
+              <defs>
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="4" stdDeviation="6" floodOpacity="0.3" />
+                </filter>
+              </defs>
               <Pie
                 data={data}
                 dataKey="total"
                 nameKey="name"
                 cx="50%"
                 cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={2}
+                innerRadius={70}
+                outerRadius={110}
+                paddingAngle={3}
+                isAnimationActive={true}
+                animationBegin={100}
+                animationDuration={1200}
+                animationEasing="ease-out"
               >
                 {data.map((entry) => {
                   if (!entry) return null;
@@ -116,7 +128,9 @@ export function ExpensesByCategory({ month, year }: ExpensesByCategoryProps) {
                     <Cell
                       key={entry.id}
                       fill={entry.color ?? "#6366f1"}
-                      strokeWidth={0}
+                      stroke="var(--background)"
+                      strokeWidth={2}
+                      style={{ filter: "url(#glow)", outline: "none" }}
                     />
                   );
                 })}

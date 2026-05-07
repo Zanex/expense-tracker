@@ -13,6 +13,7 @@ interface KpiCardProps {
   deltaLabel?: string;         // es. "vs mese scorso"
   icon?: LucideIcon;
   isLoading?: boolean;
+  className?: string;
 }
 
 // ─── Component ───────────────────────────────────────────
@@ -25,9 +26,10 @@ export function KpiCard({
   deltaLabel = "vs mese scorso",
   icon: Icon,
   isLoading = false,
+  className,
 }: KpiCardProps) {
   return (
-    <Card className="glass-card overflow-hidden">
+    <Card className={cn("glass-card overflow-hidden", className)}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">
           {title}

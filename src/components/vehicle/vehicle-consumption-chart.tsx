@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   ComposedChart,
   Line,
@@ -102,8 +103,8 @@ function CustomTooltip({
   if (!d) return null;
 
   return (
-    <div className="rounded-lg border bg-popover px-3 py-2.5 shadow-md outline-none text-sm">
-      <p className="mb-2 font-medium text-muted-foreground">{label}</p>
+    <div className="glass rounded-xl border border-white/10 bg-background/40 px-4 py-3 shadow-2xl backdrop-blur-xl outline-none text-sm">
+      <p className="mb-3 font-bold text-gradient uppercase tracking-wider text-xs">{label}</p>
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-6">
           <span className="flex items-center gap-1.5">
@@ -192,12 +193,21 @@ export function VehicleConsumptionChart({ vehicleId }: VehicleConsumptionChartPr
           />
         ) : (
           <ResponsiveContainer width="100%" height={280}>
-            <ComposedChart data={chartData} barSize={20}>
+            <ComposedChart data={chartData} barSize={24} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="litersGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#f97316" stopOpacity={0.8} />
+                  <stop offset="100%" stopColor="#f97316" stopOpacity={0.1} />
+                </linearGradient>
+                <filter id="lineGlow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#14b8a6" floodOpacity="0.4" />
+                </filter>
+              </defs>
               <CartesianGrid
                 vertical={false}
-                stroke="var(--border)"
-                strokeDasharray="3 3"
-                opacity={0.5}
+                stroke="currentColor"
+                className="text-muted-foreground/20"
+                strokeDasharray="4 4"
               />
               <XAxis
                 dataKey="label"
@@ -256,13 +266,15 @@ export function VehicleConsumptionChart({ vehicleId }: VehicleConsumptionChartPr
                 />
               )}
 
-              {/* Barre litri — asse destro */}
               <Bar
                 yAxisId="liters"
                 dataKey="liters"
-                fill="#f97316"
-                opacity={0.5}
-                radius={[3, 3, 0, 0]}
+                fill="url(#litersGradient)"
+                radius={[4, 4, 0, 0]}
+                isAnimationActive={true}
+                animationBegin={100}
+                animationDuration={1500}
+                animationEasing="ease-out"
               />
 
               {/* Linea consumo — asse sinistro */}
@@ -271,9 +283,14 @@ export function VehicleConsumptionChart({ vehicleId }: VehicleConsumptionChartPr
                 type="monotone"
                 dataKey="consumption"
                 stroke="#14b8a6"
-                strokeWidth={2.5}
+                strokeWidth={3}
                 dot={{ fill: "#14b8a6", r: 4, strokeWidth: 0 }}
-                activeDot={{ r: 6, strokeWidth: 0 }}
+                activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)", filter: "url(#lineGlow)" }}
+                style={{ filter: "url(#lineGlow)" }}
+                isAnimationActive={true}
+                animationBegin={300}
+                animationDuration={1500}
+                animationEasing="ease-out"
               />
             </ComposedChart>
           </ResponsiveContainer>

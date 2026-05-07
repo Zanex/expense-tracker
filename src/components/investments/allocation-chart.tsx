@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { api } from "~/trpc/react";
 import { formatCurrency } from "~/lib/utils";
 import {
@@ -33,10 +33,12 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Toolti
   if (!active || !payload?.length) return null;
   const item = payload[0]!;
   return (
-    <div className="rounded-lg border bg-background px-3 py-2 shadow-md text-sm">
-      <p className="font-medium">{item.name}</p>
-      <p className="tabular-nums">{formatCurrency(item.value)}</p>
-      <p className="text-muted-foreground">{item.payload.percentage}%</p>
+    <div className="glass rounded-xl border border-white/10 bg-background/40 px-4 py-3 shadow-2xl backdrop-blur-xl outline-none text-sm">
+      <p className="font-bold text-gradient mb-1">{item.name}</p>
+      <p className="tabular-nums font-semibold text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]">
+        {formatCurrency(item.value)}
+      </p>
+      <p className="text-muted-foreground/80 font-medium text-xs mt-1">{item.payload.percentage}%</p>
     </div>
   );
 }
@@ -113,7 +115,7 @@ export function AllocationChart() {
   }));
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border bg-card p-5">
+    <div className="glass-card flex flex-col gap-4 p-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-muted-foreground">Allocazione</h3>
@@ -138,20 +140,35 @@ export function AllocationChart() {
       </div>
 
       {/* Chart */}
-      <ResponsiveContainer width="100%" height={200}>
+      <ResponsiveContainer width="100%" height={220}>
         <PieChart>
+          <defs>
+            <filter id="allocationGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="4" stdDeviation="5" floodOpacity="0.25" />
+            </filter>
+          </defs>
           <Pie
             data={chartData}
             dataKey="value"
             nameKey="name"
             cx="50%"
             cy="50%"
-            innerRadius={55}
-            outerRadius={90}
-            paddingAngle={2}
+            innerRadius={65}
+            outerRadius={100}
+            paddingAngle={3}
+            isAnimationActive={true}
+            animationBegin={100}
+            animationDuration={1200}
+            animationEasing="ease-out"
           >
             {chartData.map((entry, i) => (
-              <Cell key={i} fill={entry.color} strokeWidth={0} />
+              <Cell 
+                key={i} 
+                fill={entry.color} 
+                stroke="var(--background)"
+                strokeWidth={2}
+                style={{ filter: "url(#allocationGlow)", outline: "none" }}
+              />
             ))}
           </Pie>
           <Tooltip content={<CustomTooltip />} />

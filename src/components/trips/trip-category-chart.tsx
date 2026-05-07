@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { api } from "~/trpc/react";
 import { formatCurrency } from "~/lib/utils";
@@ -34,10 +35,12 @@ function CustomTooltip({
   if (!item) return null;
 
   return (
-    <div className="rounded-lg border bg-popover px-3 py-2 shadow-md outline-none">
-      <p className="text-sm font-medium text-popover-foreground">{item.name}</p>
-      <p className="text-sm text-muted-foreground">{formatCurrency(item.value)}</p>
-      <p className="text-xs text-muted-foreground">{item.payload.percentage}% del totale</p>
+    <div className="glass rounded-xl border border-white/10 bg-background/40 px-4 py-3 shadow-2xl backdrop-blur-xl outline-none text-sm">
+      <p className="font-bold text-gradient mb-1">{item.name}</p>
+      <p className="tabular-nums font-semibold text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]">
+        {formatCurrency(item.value)}
+      </p>
+      <p className="text-muted-foreground/80 font-medium text-xs mt-1">{item.payload.percentage}% del totale</p>
     </div>
   );
 }
@@ -88,21 +91,32 @@ export function TripCategoryChart({ tripId }: TripCategoryChartProps) {
         ) : (
           <ResponsiveContainer width="100%" height={280}>
             <PieChart>
+              <defs>
+                <filter id="tripPieGlow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="4" stdDeviation="5" floodOpacity="0.3" />
+                </filter>
+              </defs>
               <Pie
                 data={data}
                 dataKey="total"
                 nameKey="name"
                 cx="50%"
                 cy="50%"
-                innerRadius={55}
-                outerRadius={95}
-                paddingAngle={2}
+                innerRadius={65}
+                outerRadius={105}
+                paddingAngle={3}
+                isAnimationActive={true}
+                animationBegin={100}
+                animationDuration={1200}
+                animationEasing="ease-out"
               >
                 {data.map((entry) => (
                   <Cell
                     key={entry?.id}
                     fill={entry?.color ?? "#6366f1"}
-                    strokeWidth={0}
+                    stroke="var(--background)"
+                    strokeWidth={2}
+                    style={{ filter: "url(#tripPieGlow)", outline: "none" }}
                   />
                 ))}
               </Pie>

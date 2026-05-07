@@ -33,7 +33,7 @@ export function VehicleWidget() {
     : 0;
 
   return (
-    <Card className="glass-card overflow-hidden">
+    <Card className="glass-card aura-primary overflow-hidden">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">

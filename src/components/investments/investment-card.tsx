@@ -138,7 +138,10 @@ export function InvestmentCard({ investment: inv }: InvestmentCardProps) {
 
   return (
     <>
-      <div className="group flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
+      <div className={cn(
+        "glass-card group flex flex-col gap-3 p-4",
+        inv.unrealizedPnL && inv.unrealizedPnL > 0 ? "aura-success" : inv.unrealizedPnL && inv.unrealizedPnL < 0 ? "aura-destructive" : ""
+      )}>
 
         {/* Header: emoji + nome + badge tipo + azioni */}
         <div className="flex items-start justify-between gap-2">

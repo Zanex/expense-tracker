@@ -34,7 +34,10 @@ export function UpcomingRecurring({ month, year }: UpcomingRecurringProps) {
   if (!isLoading && (!data || data.length === 0)) return null;
 
   return (
-    <Card className="glass-card overflow-hidden">
+    <Card className={cn(
+      "glass-card overflow-hidden",
+      data && data.some(d => !d.alreadyCreated) && "aura-primary"
+    )}>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
           <RefreshCw className="h-4 w-4" />

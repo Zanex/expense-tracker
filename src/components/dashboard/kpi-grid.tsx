@@ -1,7 +1,7 @@
 "use client";
 
 import { api } from "~/trpc/react";
-import { formatCurrency } from "~/lib/utils";
+import { formatCurrency, cn } from "~/lib/utils";
 import { KpiCard } from "./kpi-card";
 import {
   Euro,
@@ -34,6 +34,9 @@ export function KpiGrid({ month, year }: KpiGridProps) {
         delta={summary?.totalAmountDelta}
         icon={Euro}
         isLoading={isLoading}
+        className={cn(
+          (summary?.totalAmountDelta ?? 0) > 0 ? "aura-destructive" : (summary?.totalAmountDelta ?? 0) < 0 ? "aura-success" : "aura-primary"
+        )}
       />
 
       {/* Numero spese */}
@@ -46,6 +49,7 @@ export function KpiGrid({ month, year }: KpiGridProps) {
         delta={summary?.expenseCountDelta}
         icon={Receipt}
         isLoading={isLoading}
+        className={(summary?.expenseCountDelta ?? 0) > 0 ? "aura-warning" : ""}
       />
 
       {/* Media per spesa */}

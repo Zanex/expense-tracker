@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Legend,
@@ -23,8 +24,8 @@ function CustomTooltip({
   const expenses = payload.find((p) => p.dataKey === "expenses")?.value ?? 0;
 
   return (
-    <div className="rounded-lg border bg-popover px-3 py-2.5 shadow-md outline-none">
-      <p className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</p>
+    <div className="glass rounded-xl border border-white/10 bg-background/40 px-4 py-3 shadow-2xl backdrop-blur-xl outline-none">
+      <p className="mb-2 text-xs font-bold text-gradient uppercase tracking-wider">{label}</p>
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-4">
           <span className="flex items-center gap-1.5 text-xs">
@@ -78,8 +79,18 @@ export function VehicleMonthlyChart({ vehicleId }: VehicleMonthlyChartProps) {
           />
         ) : (
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={data} barSize={14} barGap={2}>
-              <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" opacity={0.5} />
+            <BarChart data={data} barSize={16} barGap={2} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="fuelGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#f97316" stopOpacity={1} />
+                  <stop offset="100%" stopColor="#f97316" stopOpacity={0.4} />
+                </linearGradient>
+                <linearGradient id="expensesGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#6366f1" stopOpacity={1} />
+                  <stop offset="100%" stopColor="#6366f1" stopOpacity={0.4} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} stroke="currentColor" className="text-muted-foreground/20" strokeDasharray="4 4" />
               <XAxis
                 dataKey="label"
                 tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
@@ -101,8 +112,26 @@ export function VehicleMonthlyChart({ vehicleId }: VehicleMonthlyChartProps) {
                   </span>
                 )}
               />
-              <Bar dataKey="fuel" fill="#f97316" radius={[3, 3, 0, 0]} stackId="a" />
-              <Bar dataKey="expenses" fill="#6366f1" radius={[3, 3, 0, 0]} stackId="a" />
+              <Bar 
+                dataKey="fuel" 
+                fill="url(#fuelGradient)" 
+                radius={[0, 0, 0, 0]} 
+                stackId="a" 
+                isAnimationActive={true}
+                animationBegin={100}
+                animationDuration={1500}
+                animationEasing="ease-out"
+              />
+              <Bar 
+                dataKey="expenses" 
+                fill="url(#expensesGradient)" 
+                radius={[4, 4, 0, 0]} 
+                stackId="a" 
+                isAnimationActive={true}
+                animationBegin={200}
+                animationDuration={1500}
+                animationEasing="ease-out"
+              />
             </BarChart>
           </ResponsiveContainer>
         )}

@@ -169,6 +169,28 @@
 .animate-stagger > *:nth-child(4) { animation-delay: 0.4s; }
 .animate-stagger > *:nth-child(5) { animation-delay: 0.5s; }
 
+/* ─── Contextual Auras ─────────────────────────────────── */
+
+@utility aura-success {
+  box-shadow: 0 0 40px -10px oklch(0.627 0.265 149.214 / 0.15);
+  border-color: oklch(0.627 0.265 149.214 / 0.2) !important;
+}
+
+@utility aura-warning {
+  box-shadow: 0 0 40px -10px oklch(0.769 0.188 70.08 / 0.15);
+  border-color: oklch(0.769 0.188 70.08 / 0.2) !important;
+}
+
+@utility aura-destructive {
+  box-shadow: 0 0 40px -10px oklch(0.637 0.237 25.331 / 0.2);
+  border-color: oklch(0.637 0.237 25.331 / 0.25) !important;
+}
+
+@utility aura-primary {
+  box-shadow: 0 0 40px -10px oklch(0.585 0.233 277.117 / 0.15);
+  border-color: oklch(0.585 0.233 277.117 / 0.2) !important;
+}
+
 /* ─── Epic Theme Transition ────────────────────────────── */
 
 ::view-transition-old(root),
